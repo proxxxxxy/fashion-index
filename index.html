@@ -17,13 +17,22 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=Archivo:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=1">
+<!-- Bodoni はモード誌の声そのものです。日本語側を明朝で受けると、
+     どちらも縦線が太く横線が細いので、同じ活字に見えます。
+     ゴシックは見出しではなくラベルと本文の実務だけに使います。 -->
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Zen+Old+Mincho:wght@400;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 
 <div class="paper" aria-hidden="true"></div>
 <div class="grain" aria-hidden="true"></div>
+
+<!-- 70 : 25 : 5。この索引の背骨をそのまま進捗計にしています。
+     読み進めるほど、面積の大きい色から順に満ちます。 -->
+<div class="progress" aria-hidden="true">
+  <span class="progress-70"></span><span class="progress-25"></span><span class="progress-5"></span>
+</div>
 
 <a class="skip" href="#styles">本文へスキップ</a>
 
@@ -200,8 +209,8 @@
 
 <div class="toast" id="toast" aria-live="polite"></div>
 
-<script src="data-colors.js?v=1"></script>
-<script src="data-styles.js?v=1"></script>
-<script src="app.js?v=1"></script>
+<script src="data-colors.js?v=2"></script>
+<script src="data-styles.js?v=2"></script>
+<script src="app.js?v=2"></script>
 </body>
 </html>

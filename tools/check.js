@@ -73,6 +73,15 @@ for (const p of PRINCIPLES) {
 
 ok(TERMS.length > 0, 'TERMS が空');
 
+// 白紙事故の見張り。スクロール演出で中身を隠す指定は、必ず html.js の下に
+// なければいけません。素の [data-lazy] に opacity:0 を書くと、
+// JavaScript が動かなかった環境でページ全体が消えます。
+const css = read('style.css');
+const bareHide = /^\s*\[data-lazy\][^{]*\{[^}]*opacity:\s*0/m.test(css);
+ok(!bareHide, 'style.css: [data-lazy] を .js で囲わずに隠しています。JS 無効時に白紙になります');
+ok(/\.js \[data-lazy\]/.test(css), 'style.css: .js [data-lazy] の指定が見当たりません');
+ok(/classList\.add\('js'\)/.test(read('app.js')), "app.js: html に 'js' クラスを付ける行がありません");
+
 if (fails.length) {
   console.error(`✕ ${fails.length} 件\n` + fails.map(f => '  - ' + f).join('\n'));
   process.exit(1);

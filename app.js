@@ -15,6 +15,10 @@ const swatch = id => byId(SWATCHES, id);
    index から決め打ちの疑似乱数で散らします。 */
 const tilt = i => ((Math.sin(i * 12.9898) * 43758.5453) % 1 * 2.4 - 1.2).toFixed(2) + 'deg';
 
+/* 現れる順の差。40ms ずつずらし、8 枚目で頭打ちにします。
+   均等に伸ばし続けると、下のほうのカードが目に見えて待たされます。 */
+const stagger = i => Math.min(i, 8) * 40 + 'ms';
+
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
 
 /* ── 系統 ───────────────────────────────────── */
@@ -33,7 +37,7 @@ function renderStyles() {
     const band = [...s.palette.base, ...s.palette.accent]
       .map(c => `<span style="background:${esc(c)}"></span>`).join('');
     return `
-      <button type="button" class="style-card" data-style="${esc(s.id)}" style="--rot:${tilt(i)}">
+      <button type="button" class="style-card" data-style="${esc(s.id)}" style="--rot:${tilt(i)};--stagger:${stagger(i)}">
         <span class="card-era">${esc(s.era)}</span>
         <span class="card-band" aria-hidden="true">${band}</span>
         <span class="card-body">
@@ -144,7 +148,7 @@ const DEMOS = {
 
 function renderPrinciples() {
   $('#principle-list').innerHTML = PRINCIPLES.map((p, i) => `
-    <article class="principle" id="p-${esc(p.id)}" style="--rot:${tilt(i + 40)}">
+    <article class="principle" id="p-${esc(p.id)}" style="--rot:${tilt(i + 40)};--stagger:${stagger(i)}">
       <p class="p-num">${esc(p.num)}</p>
       <h3 class="p-title">${esc(p.title)}</h3>
       <p class="p-lead">${esc(p.lead)}</p>
@@ -165,7 +169,7 @@ function renderRecipes() {
     }).join('');
     const names = r.colors.map(cid => swatch(cid).name).join(' · ');
     return `
-      <article class="recipe" data-tags="${esc(r.tags.join(' '))}" style="--rot:${tilt(i + 90)}">
+      <article class="recipe" data-tags="${esc(r.tags.join(' '))}" style="--rot:${tilt(i + 90)};--stagger:${stagger(i)}">
         <div class="recipe-colors" aria-hidden="true">${cols}</div>
         <div class="recipe-body">
           <h3 class="recipe-name">${esc(r.name)}</h3>
@@ -196,8 +200,8 @@ function renderRecipes() {
 /* ── 用語 ───────────────────────────────────── */
 
 function renderTerms() {
-  $('#term-list').innerHTML = TERMS.map(t => `
-    <div>
+  $('#term-list').innerHTML = TERMS.map((t, i) => `
+    <div style="--stagger:${stagger(i)}">
       <dt>${esc(t.term)}<small>${esc(t.read)}</small></dt>
       <dd>${esc(t.desc)}</dd>
     </div>`).join('');
@@ -401,9 +405,10 @@ function route() {
 // スクロールで届いたところから見せます。中身は最初から DOM にあるので、
 // 検索にも読み上げにも影響しません。
 function observeLazy() {
-  if (!('IntersectionObserver' in window)) {
-    return $$('[data-lazy]').forEach(el => el.classList.add('shown'));
-  }
+  const reveal = () => $$('[data-lazy]').forEach(el => el.classList.add('shown'));
+
+  if (!('IntersectionObserver' in window)) return reveal();
+
   const io = new IntersectionObserver((entries) => {
     for (const e of entries) {
       if (e.isIntersecting) { e.target.classList.add('shown'); io.unobserve(e.target); }
@@ -411,11 +416,59 @@ function observeLazy() {
   }, { rootMargin: '0px 0px -8% 0px', threshold: .04 });
 
   $$('[data-lazy]').forEach(el => io.observe(el));
+
+  // 保険。IntersectionObserver は、タブが表示されていないなど
+  // 条件によっては一度も発火しません。そのとき隠したままだと、
+  // ページ全体が白紙に見えます。2.5 秒経っても何も出ていなければ、
+  // 演出をあきらめて全部見せます。
+  setTimeout(() => {
+    if (!document.querySelector('[data-lazy].shown')) reveal();
+  }, 2500);
+}
+
+/* ── 進捗計 ─────────────────────────────────
+   70 : 25 : 5 を、そのまま読み進み表示にしています。
+   面積の大きい色から順に満ちるので、いま全体のどのあたりかが
+   数字を出さずに分かります。 */
+
+function bindProgress() {
+  const spans = $$('.progress span');
+  if (!spans.length) return;
+
+  // 3 本の帯が受け持つ範囲。合計 1 になります。
+  const bands = [0.70, 0.25, 0.05];
+  let queued = false;
+
+  const paint = () => {
+    queued = false;
+    const doc = document.documentElement;
+    const max = doc.scrollHeight - doc.clientHeight;
+    const p = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+
+    let start = 0;
+    spans.forEach((el, i) => {
+      const end = start + bands[i];
+      // この帯が受け持つ区間の、どこまで来ているか
+      const fill = Math.min(1, Math.max(0, (p - start) / bands[i]));
+      el.style.transform = `scaleX(${fill})`;
+      start = end;
+    });
+  };
+
+  // スクロールごとに書かず、次の描画に 1 回だけまとめます。
+  const onScroll = () => { if (!queued) { queued = true; requestAnimationFrame(paint); } };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll, { passive: true });
+  paint();
 }
 
 /* ── 起動 ───────────────────────────────────── */
 
 function init() {
+  // 隠す CSS は html.js の下にしか書いていません。この 1 行が無いと、
+  // 演出が一切かからない代わりに、白紙になることも絶対にありません。
+  document.documentElement.classList.add('js');
+
   renderStyles();
   renderPrinciples();
   renderRecipes();
@@ -424,6 +477,7 @@ function init() {
   bindLabActions();
   syncLab();
   observeLazy();
+  bindProgress();
 
   $('#sheet').addEventListener('click', e => {
     if (e.target.closest('[data-close]')) {
