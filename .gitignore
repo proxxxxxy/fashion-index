@@ -1,0 +1,11 @@
+# 手控え。git には入れません。
+*_backup*.js
+*_backup*.css
+*_backup*.html
+*_backup*.md
+
+# OS / エディタ
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
