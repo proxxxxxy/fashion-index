@@ -15,8 +15,10 @@ const src = [
   read('judge.js'),
   read('data-colors.js'),
   read('data-styles.js'),
+  read('closet.js'),
   'globalThis.__out = { SWATCHES, SWATCH_GROUPS, STYLES, PRINCIPLES, RECIPES, TERMS, EXCEPTIONS,' +
-  ' TOPS, OUTERS, BOTTOMS, SHOES, HATS, DETAILS, garmentSVG, judge };',
+  ' TOPS, OUTERS, BOTTOMS, SHOES, HATS, DETAILS, TYPE_NAMES, garmentSVG, judge,' +
+  ' CLOSET_PARTS, typesOf, parseCloset, formatCloset, summarise, bestAddition, starterCloset };',
 ].join('\n;\n');
 
 const ctx = { globalThis: null, console };
@@ -25,7 +27,9 @@ vm.createContext(ctx);
 vm.runInContext(src, ctx, { filename: 'data' });
 
 const { SWATCHES, SWATCH_GROUPS, STYLES, PRINCIPLES, RECIPES, TERMS, EXCEPTIONS,
-        TOPS, OUTERS, BOTTOMS, SHOES, HATS, DETAILS, garmentSVG, judge } = ctx.__out;
+        TOPS, OUTERS, BOTTOMS, SHOES, HATS, DETAILS, TYPE_NAMES, garmentSVG, judge,
+        CLOSET_PARTS, typesOf, parseCloset, formatCloset, summarise, bestAddition,
+        starterCloset } = ctx.__out;
 
 /* パスから座標を取り出します。
    最初は数値を並び順で x,y,x,y… と数えていましたが、それだと H（水平）と
@@ -290,6 +294,78 @@ for (const [name, paths] of Object.entries(OUTERS)) {
   for (const [k, v] of Object.entries(OUTERS)) limit(`OUTERS.${k}`, v, 26);
   // 靴が肩より外に出ると、それだけでがに股に見えます。
   for (const [k, v] of Object.entries(SHOES))  limit(`SHOES.${k}`, v, 0);
+}
+
+/* 型紙の日本語名。名前が無い型紙は、クローゼットの選択肢に
+   内部の英語名のまま出ます。 */
+for (const [cat, set] of Object.entries(PART_SETS)) {
+  ok(TYPE_NAMES[cat], `TYPE_NAMES に ${cat} がありません`);
+  for (const name of Object.keys(set)) {
+    if (name === 'none') continue;
+    ok((TYPE_NAMES[cat] || {})[name], `TYPE_NAMES.${cat}.${name} がありません`);
+  }
+  for (const name of Object.keys(TYPE_NAMES[cat] || {})) {
+    ok(name in set, `TYPE_NAMES.${cat}.${name} に対応する型紙がありません`);
+  }
+}
+
+/* 手持ちから。ここは数を出す区画なので、数が正しいことを確かめます。 */
+{
+  // 部位の記号は URL の意味そのものです。変えると配ったリンクが別物を指します。
+  ok(CLOSET_PARTS.map(p => p.tag).join('') === 'hotbs',
+     'CLOSET_PARTS の記号が変わっています。配ったクローゼットのリンクが別物を指します');
+
+  // 往復。書いて読んで同じものが戻ること。
+  const seed = starterCloset();
+  ok(seed.length > 0, 'starterCloset が空です');
+  ok(formatCloset(parseCloset(formatCloset(seed))) === formatCloset(seed),
+     'クローゼットの符号化が往復しません');
+
+  // 壊れた入力で落ちないこと。
+  for (const bad of ['', 'x-y-z', 't-nope-white', 't-shirt-nope', '...', 'h-cap-navy.h-cap-navy']) {
+    let ok2 = true;
+    try { parseCloset(bad); } catch { ok2 = false; }
+    ok(ok2, `parseCloset("${bad}") が例外を投げます`);
+  }
+  ok(parseCloset('h-cap-navy.h-cap-navy').length === 1, 'parseCloset が同じ服を二重に数えます');
+
+  // 数え方。上下足元が 1 点ずつなら、帽子も羽織りも無いので 1 通りだけ。
+  const one = parseCloset('t-shirt-white.b-slim-navy.s-low-brown');
+  ok(summarise(one).total === 1, `上下足元1点ずつで ${summarise(one).total} 通りと数えています`);
+
+  /* 帽子を 1 点足しても、組める「組」は増えません。帽子は同じ 3 点の
+     着方の違いなので、掛け算しないのが正しい数え方です。ここを掛けていた
+     ときは「次に買う1着＝黒のキャップ、+10通り」という無意味な助言が出ました。 */
+  const two = parseCloset('t-shirt-white.b-slim-navy.s-low-brown.h-cap-navy');
+  ok(summarise(two).total === 1,
+     `帽子を足して ${summarise(two).total} 通りに増えています。着方を掛け算しています`);
+
+  // 必須部位が欠けていたら 0 通り。
+  ok(summarise(parseCloset('t-shirt-white.b-slim-navy')).total === 0,
+     '足元が無いのに組める通りが出ています');
+
+  // 総数は掛け算と一致すること。
+  const many = starterCloset();
+  const n = k => many.filter(i => i.part === k).length;
+  // 着方（帽子・羽織りの有無）は掛けません。3 点の組み合わせだけです。
+  const expect = n('top') * n('bottom') * n('shoe');
+  ok(summarise(many).total === expect,
+     `見本の総数が ${summarise(many).total}、掛け算では ${expect}`);
+
+  // 見本は、通る組が 1 つ以上なければ道具になりません。
+  ok(summarise(many).clear > 0, '見本のクローゼットで通る組が 0 です');
+
+  /* 次に買う1着は、本当に増える1着でなければいけません。
+     「増える」と言いながら増えないなら、近似が混ざっています。 */
+  const buy = bestAddition(many);
+  if (buy) {
+    const after = summarise([...many, buy.item]).clear;
+    ok(after === buy.to, `次に買う1着の予想が ${buy.to}、実際は ${after}`);
+    ok(buy.gained > 0, '次に買う1着で通る組が増えていません');
+    ok(!many.some(i => i.part === buy.item.part && i.type === buy.item.type
+                    && i.color === buy.item.color),
+       '次に買う1着が、すでに持っている服です');
+  }
 }
 
 // 羽織りと上が同じ色だと、開けた意味がありません。

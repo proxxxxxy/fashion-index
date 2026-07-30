@@ -21,7 +21,7 @@
      どちらも縦線が太く横線が細いので、同じ活字に見えます。
      ゴシックは見出しではなくラベルと本文の実務だけに使います。 -->
 <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Zen+Old+Mincho:wght@400;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=15">
+<link rel="stylesheet" href="style.css?v=18">
 </head>
 <body>
 
@@ -50,6 +50,7 @@
     <li><a href="#principles">原則</a></li>
     <li><a href="#recipes">配色</a></li>
     <li><a href="#lab">試す</a></li>
+    <li><a href="#closet">手持ち</a></li>
   </ul>
 </nav>
 
@@ -239,10 +240,53 @@
   </div>
 </section>
 
-<!-- ───────── 用語 ───────── -->
-<section class="sec sec-terms" id="terms" data-lazy data-num="V" data-label="用語">
+<!-- ───────── 手持ちから ───────── -->
+<section class="sec sec-closet" id="closet" data-lazy data-num="V" data-label="手持ちから">
   <div class="sec-head">
     <p class="sec-num">Ⅴ</p>
+    <h2>手持ち<em>から</em></h2>
+    <p class="sec-lead">
+      ここまでは分類と講義と目録です。読み終わってクローゼットの前に立つと、
+      何を着ればいいかは分かりません。<b>この区画だけが、あなたの在庫から始まります。</b>
+      持っている服を入れると、組める組を全部出して、次に買う1着を総当たりで解きます。
+    </p>
+  </div>
+
+  <div class="closet">
+    <div class="closet-add">
+      <h3>持っている服を入れる</h3>
+      <div class="add-row">
+        <label>部位<select id="add-part"></select></label>
+        <label>型<select id="add-type"></select></label>
+        <label>色<select id="add-color"></select></label>
+        <button type="button" class="btn" id="btn-add">入れる</button>
+      </div>
+      <p class="closet-note">
+        上・下・足元は必須です。帽子と羽織りは<b>同じ3点の着方の違い</b>として
+        扱うので、持っていても組の数は増えません。増えるのは、それが
+        落ちていた組を救うときだけです。
+      </p>
+      <ul class="closet-list" id="closet-list"></ul>
+      <div class="closet-actions">
+        <button type="button" class="btn btn-ghost" id="btn-closet-share">クローゼットのリンク</button>
+        <button type="button" class="btn btn-ghost" id="btn-closet-reset">見本に戻す</button>
+        <button type="button" class="btn btn-ghost" id="btn-closet-clear">空にする</button>
+      </div>
+    </div>
+
+    <div class="closet-out">
+      <div class="closet-count" id="closet-count"></div>
+      <div class="closet-buy" id="closet-buy"></div>
+      <h3 class="closet-sub">通る組</h3>
+      <div class="closet-grid" id="closet-grid"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── 用語 ───────── -->
+<section class="sec sec-terms" id="terms" data-lazy data-num="VI" data-label="用語">
+  <div class="sec-head">
+    <p class="sec-num">Ⅵ</p>
     <h2>用語</h2>
   </div>
   <dl class="term-list" id="term-list"></dl>
@@ -267,10 +311,11 @@
 
 <div class="toast" id="toast" aria-live="polite"></div>
 
-<script src="garment.js?v=15"></script>
-<script src="judge.js?v=15"></script>
-<script src="data-colors.js?v=15"></script>
-<script src="data-styles.js?v=15"></script>
-<script src="app.js?v=15"></script>
+<script src="garment.js?v=18"></script>
+<script src="judge.js?v=18"></script>
+<script src="data-colors.js?v=18"></script>
+<script src="data-styles.js?v=18"></script>
+<script src="closet.js?v=18"></script>
+<script src="app.js?v=18"></script>
 </body>
 </html>

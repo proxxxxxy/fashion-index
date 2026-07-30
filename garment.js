@@ -312,6 +312,16 @@ const DETAILS = {
   },
 };
 
+/* 型紙の日本語名。クローゼットで持ち物を並べるのに使います。
+   型紙を足したらここにも足してください。`check.js` が対応を見ています。 */
+const TYPE_NAMES = {
+  hat:    { cap: 'キャップ', beanie: 'ニット帽' },
+  outer:  { jacket: 'ジャケット', coat: 'コート', tailored: 'テーラード', shell: 'シェル' },
+  top:    { tee: 'Tシャツ', shirt: 'シャツ', knit: 'ニット', hoodie: 'フーディ', tailored: 'テーラード' },
+  bottom: { slim: '細いパンツ', denim: 'デニム', wide: 'ワイドパンツ', cargo: 'カーゴ', shorts: 'ショーツ' },
+  shoe:   { low: 'ローカット', boot: 'ブーツ' },
+};
+
 /* 影の型。布の左に落ちる影と、右からの反射を 1 枚で済ませます。
    instance ごとに id を変えないと、同じ画面に複数置いたとき
    最初のグラデーションが全部に効いてしまいます。 */

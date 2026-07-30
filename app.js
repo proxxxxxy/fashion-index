@@ -249,6 +249,185 @@ function renderExceptions() {
   });
 }
 
+/* ── 手持ちから ─────────────────────────────
+   在庫から始めて次の一手を返す区画。他の区画と違って、出すのは
+   意見ではなく数です。localStorage に持ち物を残し、リンクにも詰めます。 */
+
+const CLOSET_KEY = 'wardrobe-index:closet';
+let closet = [];
+
+function loadCloset() {
+  try {
+    const saved = localStorage.getItem(CLOSET_KEY);
+    if (saved !== null) return parseCloset(saved);
+  } catch { /* 保存が使えない環境でも動かします */ }
+  return starterCloset();
+}
+
+function saveCloset() {
+  try { localStorage.setItem(CLOSET_KEY, formatCloset(closet)); } catch {}
+}
+
+const typeName = it => (TYPE_NAMES[it.part] || {})[it.type] || it.type;
+const itemLabel = it => `${swatch(it.color).name}の${typeName(it)}`;
+
+// 追加フォーム。部位を変えると型の一覧も変わります。
+function renderAddForm() {
+  const partSel = $('#add-part');
+  if (!partSel) return;
+
+  partSel.innerHTML = CLOSET_PARTS
+    .map(p => `<option value="${p.key}">${esc(p.name)}</option>`).join('');
+  $('#add-color').innerHTML = SWATCHES
+    .map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+
+  const syncTypes = () => {
+    $('#add-type').innerHTML = typesOf(partSel.value)
+      .map(t => `<option value="${t}">${esc((TYPE_NAMES[partSel.value] || {})[t] || t)}</option>`)
+      .join('');
+  };
+  partSel.addEventListener('change', syncTypes);
+  syncTypes();
+
+  $('#btn-add').addEventListener('click', () => {
+    const it = { part: partSel.value, type: $('#add-type').value, color: $('#add-color').value };
+    if (closet.some(x => x.part === it.part && x.type === it.type && x.color === it.color)) {
+      return toast('それはもう入っています');
+    }
+    closet.push(it);
+    saveCloset();
+    renderCloset();
+    toast(`${itemLabel(it)}を入れました`);
+  });
+
+  $('#closet-list').addEventListener('click', e => {
+    const b = e.target.closest('[data-remove]');
+    if (!b) return;
+    closet.splice(Number(b.dataset.remove), 1);
+    saveCloset();
+    renderCloset();
+  });
+
+  $('#btn-closet-share').addEventListener('click', async () => {
+    const url = location.origin + location.pathname + '#/closet/' + formatCloset(closet);
+    try { await navigator.clipboard.writeText(url); toast('クローゼットのリンクをコピーしました'); }
+    catch { location.hash = '#/closet/' + formatCloset(closet); toast('アドレス欄のリンクを共有してください'); }
+  });
+  $('#btn-closet-reset').addEventListener('click', () => {
+    closet = starterCloset(); saveCloset(); renderCloset(); toast('見本に戻しました');
+  });
+  $('#btn-closet-clear').addEventListener('click', () => {
+    closet = []; saveCloset(); renderCloset();
+  });
+}
+
+function renderCloset() {
+  if (!$('#closet-list')) return;
+
+  // 持ち物。部位ごとにまとめて並べます。
+  $('#closet-list').innerHTML = CLOSET_PARTS.map(p => {
+    const owned = closet.map((it, i) => ({ it, i })).filter(x => x.it.part === p.key);
+    if (!owned.length) return '';
+    return `<li class="closet-part">
+      <span class="closet-part-name">${esc(p.name)}</span>
+      <span class="closet-items">${owned.map(({ it, i }) => `
+        <button type="button" class="closet-item" data-remove="${i}"
+                title="外す" aria-label="${esc(itemLabel(it))}を外す">
+          <i style="background:${swatch(it.color).hex}"></i>${esc(typeName(it))}<b>✕</b>
+        </button>`).join('')}</span>
+    </li>`;
+  }).join('') || '<li class="closet-empty">まだ何も入っていません。上・下・足元を1点ずつ入れると組み始めます。</li>';
+
+  const parts = CLOSET_PARTS.filter(p => !p.optional)
+    .filter(p => !closet.some(it => it.part === p.key));
+  if (parts.length) {
+    $('#closet-count').innerHTML =
+      `<p class="closet-blocked">${esc(parts.map(p => p.name).join('・'))}が足りません。`
+      + `これが揃うまで、組める組は 0 通りです。</p>`;
+    $('#closet-buy').innerHTML = '';
+    $('#closet-grid').innerHTML = '';
+    return;
+  }
+
+  const sum = summarise(closet);
+  $('#closet-count').innerHTML = `
+    <p class="closet-figures">
+      <span><b>${sum.owned}</b>点</span>
+      <span><b>${sum.total}</b>通り組める</span>
+      <span class="ok"><b>${sum.clear}</b>通りが原則を通る</span>
+      <span class="warn"><b>${sum.close}</b>通りが惜しい</span>
+    </p>
+    <p class="closet-note">
+      数えているのは<b>上・下・足元の3点</b>の組み合わせです。帽子と羽織りは
+      着方の違いなので掛けません。3点ごとに着方を全部試して、最も良い着方で
+      判定しています。通る割合は
+      ${sum.total ? Math.round(sum.clear / sum.total * 100) : 0}%。
+    </p>`;
+
+  // 次に買う1着。総当たりなので、近似はしていません。
+  const buy = bestAddition(closet);
+  $('#closet-buy').innerHTML = buy ? `
+    <div class="buy-card">
+      <p class="buy-kicker">次に買う1着</p>
+      <p class="buy-item">${esc(itemLabel(buy.item))}</p>
+      <p class="buy-gain">通る組が <b>${buy.from}</b> → <b>${buy.to}</b> 通り
+        <span>（+${buy.gained}）</span></p>
+      <p class="buy-note">
+        候補を全部試して、通る組が最も増えるものです。同じだけ増えるものが
+        複数あるときは、足元・下・上・羽織り・帽子の順で選んでいます。
+      </p>
+      <button type="button" class="btn" id="btn-buy-add">これを入れてみる</button>
+    </div>` : `
+    <div class="buy-card">
+      <p class="buy-kicker">次に買う1着</p>
+      <p class="buy-item">見つかりませんでした</p>
+      <p class="buy-note">どの1着を足しても、通る組は増えません。
+        いま持っているものの組み合わせで足りている、ということです。</p>
+    </div>`;
+
+  if (buy) {
+    $('#btn-buy-add').addEventListener('click', () => {
+      closet.push(buy.item); saveCloset(); renderCloset();
+      toast(`${itemLabel(buy.item)}を入れました`);
+    });
+  }
+
+  // 通る組。着装図で並べます。多すぎると読めないので 12 までに。
+  const clear = sum.outfits.filter(o => o.verdict.bad === 0).slice(0, 12);
+  $('#closet-grid').innerHTML = clear.length ? clear.map((o, i) => {
+    const colors = {
+      top: swatch(o.top.color).hex,
+      bottom: swatch(o.bottom.color).hex,
+      shoe: swatch(o.shoe.color).hex,
+    };
+    if (o.outer) colors.outer = swatch(o.outer.color).hex;
+    if (o.hat)   colors.hat   = swatch(o.hat.color).hex;
+    const look = {
+      top: o.top.type, bottom: o.bottom.type, shoe: o.shoe.type,
+      outer: o.outer ? o.outer.type : 'none',
+      hat: o.hat ? o.hat.type : 'none',
+      colors,
+    };
+    const names = [o.hat, o.outer, o.top, o.bottom, o.shoe]
+      .filter(Boolean).map(itemLabel).join(' · ');
+    /* 羽織りや帽子は、それが成立に効いているときだけ書きます。
+       「羽織らない」を全件に出すと、羽織ってはいけないように読めます。 */
+    const worn = [o.outer ? '羽織って成立' : '', o.hat ? 'かぶって成立' : '']
+      .filter(Boolean).join('・');
+    return `<article class="fit" style="--stagger:${stagger(i)}">
+      <div class="fit-figure">${garmentSVG(look, { label: names })}</div>
+      <p class="fit-names">${esc(names)}${worn ? `<span class="fit-worn">${esc(worn)}</span>` : ''}</p>
+    </article>`;
+  }).join('') : `<p class="closet-note">通る組がありません。
+    上の「次に買う1着」を足すか、暗い色を1点入れてみてください。</p>`;
+
+  if (sum.clear > clear.length) {
+    $('#closet-grid').innerHTML +=
+      `<p class="closet-note closet-more">ほか ${sum.clear - clear.length} 通り。
+       持ち物を絞ると、ここに出る組も絞れます。</p>`;
+  }
+}
+
 /* ── 用語 ───────────────────────────────────── */
 
 function renderTerms() {
@@ -516,6 +695,20 @@ function route() {
   const style = h.match(/^#\/style\/([a-z0-9-]+)$/);
   if (style) return openSheet(style[1]);
 
+  // 手持ちのリンク。端末に何も残っていなくても、これだけで持ち歩けます。
+  const cl = h.match(/^#\/closet\/(.+)$/);
+  if (cl) {
+    closeSheet();
+    const parsed = parseCloset(decodeURIComponent(cl[1]));
+    if (parsed.length) {
+      closet = parsed;
+      saveCloset();
+      renderCloset();
+      $('#closet').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    return;
+  }
+
   // 4 つ目は帽子（none 可）、5 つ目は羽織り。どちらも省略できます。
   const lab = h.match(/^#\/lab\/([a-z]+)-([a-z]+)-([a-z]+)(?:-([a-z]+))?(?:-([a-z]+))?$/);
   if (lab) {
@@ -611,6 +804,9 @@ function init() {
   renderRecipes();
   renderExceptions();
   renderTerms();
+  renderAddForm();
+  closet = loadCloset();
+  renderCloset();
   renderShapePicker();
   renderSwatchPickers();
   bindLabActions();
