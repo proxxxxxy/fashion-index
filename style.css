@@ -520,20 +520,34 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
 
 .sec-lab { background: var(--paper-2); border-top: var(--hair); border-bottom: var(--hair); }
 
+/* 着装図・面積の帯・診断をひとまとめ（.lab-readout）にして貼り付けます。
+   色を選んでいる間、結果が画面から消えないことが条件です。 */
 .lab {
   max-width: 62rem; margin: 0 auto;
   display: grid; gap: clamp(1.2rem, 3vw, 2rem);
-  grid-template-columns: minmax(0, 15rem) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 19rem) minmax(0, 1fr);
   align-items: start;
 }
-.lab-verdict { grid-column: 1 / -1; }
+.lab-readout { position: sticky; top: 4.5rem; min-width: 0; }
+/* 選ぶ列は必ず縮められるようにします。min-width を 0 にしないと、
+   中の横スクロールが伸びきって画面外に出て、右端の色が選べなくなります。 */
+.lab-controls, .slot { min-width: 0; }
 
-@media (max-width: 700px) {
-  .lab { grid-template-columns: 1fr; }
-  .lab-figure { position: static !important; }
+@media (max-width: 760px) {
+  .lab { grid-template-columns: minmax(0, 1fr); }
+  /* 細い画面では図と診断を横に並べ、その塊ごと上に貼り付けます。 */
+  .lab-readout {
+    top: 3.1rem; z-index: 6;
+    display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: .8rem;
+    align-items: start;
+    background: var(--paper-2);
+    padding: .5rem 0 .6rem; border-bottom: var(--hair);
+  }
+  .lab-readout .figure-cap { display: none; }
+  .lab-readout .verdict-card { margin-top: 0; }
+  .lab-readout .verdict-title { font-size: 1.25rem; }
+  .lab-readout .verdict-notes li { font-size: .78rem; line-height: 1.75; }
 }
-
-.lab-figure { position: sticky; top: 4.5rem; }
 
 /* ── 着装図 ─────────────────────────────────
    garment.js が体の上に服を重ねて描きます。--form は体の色で、
@@ -598,15 +612,39 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
 .slot-label b { font-size: 1.06rem; font-weight: 900; }
 .slot-label span { font-size: .8rem; color: var(--ink-faint); }
 
-/* 色見本は群に分けます。まず土台を選び、そこに色を重ねる順に読めるように。 */
-.swatches { display: grid; gap: .55rem; }
-.sw-group { display: grid; gap: .25rem; }
-.sw-group-label {
-  margin: 0; display: flex; align-items: baseline; gap: .5rem; flex-wrap: wrap;
-  font-family: var(--jp-serif); font-weight: 700; font-size: .76rem;
+/* 色見本は横に流します。
+   縦に積むと 4 部位で 1300px を超えて、上の着装図と下の診断が
+   同じ画面に入りません。選ぶ・見る・読むを一度に見せるほうが、
+   色を決める道具として使えます。
+   群の順（土台 → 茶 → 青 → 緑 → 暖色 → 紫）は左から右に残します。 */
+.swatches {
+  display: flex; gap: .7rem;
+  overflow-x: auto; overflow-y: hidden;
+  padding: .15rem .2rem .5rem;
+  margin: 0 -.2rem;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule) transparent;
 }
-.sw-group-label span { font-weight: 400; font-size: .68rem; color: var(--ink-faint); }
-.sw-row { display: flex; flex-wrap: wrap; gap: .3rem; }
+.swatches::-webkit-scrollbar { height: 6px; }
+.swatches::-webkit-scrollbar-thumb { background: var(--rule); }
+.swatches::-webkit-scrollbar-track { background: transparent; }
+
+.sw-group { flex: 0 0 auto; display: grid; gap: .22rem; }
+.sw-group + .sw-group { padding-left: .7rem; border-left: var(--hair); }
+.sw-group-label {
+  margin: 0; font-family: var(--jp-serif); font-weight: 700; font-size: .68rem;
+  color: var(--ink-faint); white-space: nowrap;
+}
+/* 横並びでは一行の説明まで入れると幅を食うので、説明は色見本の
+   title 属性（長押し・ホバー）に回しています。 */
+.sw-group-label span { display: none; }
+.sw-row { display: flex; gap: .3rem; }
+
+.swatch-hint {
+  margin: .1rem 0 1.2rem; font-family: var(--jp-serif);
+  font-size: .72rem; line-height: 1.7; color: var(--ink-faint);
+}
 .sw {
   width: 2.1rem; height: 2.1rem; padding: 0; cursor: pointer;
   border: 2px solid var(--ink); background: var(--c);

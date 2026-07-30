@@ -15,7 +15,7 @@ const src = [
   read('data-colors.js'),
   read('data-styles.js'),
   'globalThis.__out = { SWATCHES, SWATCH_GROUPS, STYLES, PRINCIPLES, RECIPES, TERMS,' +
-  ' TOPS, OUTERS, BOTTOMS, SHOES, HATS, garmentSVG };',
+  ' TOPS, OUTERS, BOTTOMS, SHOES, HATS, DETAILS, garmentSVG };',
 ].join('\n;\n');
 
 const ctx = { globalThis: null, console };
@@ -24,7 +24,7 @@ vm.createContext(ctx);
 vm.runInContext(src, ctx, { filename: 'data' });
 
 const { SWATCHES, SWATCH_GROUPS, STYLES, PRINCIPLES, RECIPES, TERMS,
-        TOPS, OUTERS, BOTTOMS, SHOES, HATS, garmentSVG } = ctx.__out;
+        TOPS, OUTERS, BOTTOMS, SHOES, HATS, DETAILS, garmentSVG } = ctx.__out;
 
 const fails = [];
 const ok = (cond, msg) => { if (!cond) fails.push(msg); };
@@ -119,7 +119,7 @@ for (const s of STYLES) {
 // 座標系。中心線が 100 でないと、体と服の型紙が合いません。
 // y の下限が負なのは、帽子と頭を原点より上に足したためです。既存の型紙は
 // 1 つも動かしていないので、ここを 0 に戻すと頭が切れます。
-ok(/const VIEW_BOX = '0 -46 200 346'/.test(read('garment.js')),
+ok(/const VIEW_BOX = '0 -52 200 352'/.test(read('garment.js')),
    'garment.js: VIEW_BOX が変わっています。頭と帽子が切れないか確かめてください');
 
 // 帽子の型紙。冠と鍔（または折り返し）で 2 枚あるはずです。
@@ -131,6 +131,24 @@ for (const [name, paths] of Object.entries(HATS)) {
     const n = d.match(/-?\d+(?:\.\d+)?/g).map(Number);
     const ys = n.filter((_, i) => i % 2 === 1);
     ok(Math.max(...ys) <= 0, `HATS.${name}: y が正の領域（顔より下）に出ています`);
+  }
+}
+
+// 線だけのパーツ。型紙に線が無いと、その部位だけ無地のままになり、
+// 一枚だけ雑に見えます。カテゴリ名の対応も見ます（tailored は上にも
+// 羽織りにもあるので、名前だけでは足りません）。
+const PART_SETS = { top: TOPS, outer: OUTERS, bottom: BOTTOMS, shoe: SHOES, hat: HATS };
+for (const [cat, set] of Object.entries(PART_SETS)) {
+  ok(DETAILS[cat], `DETAILS に ${cat} がありません`);
+  for (const name of Object.keys(set)) {
+    if (name === 'none') continue;
+    const lines = (DETAILS[cat] || {})[name];
+    ok(Array.isArray(lines) && lines.length > 0,
+       `DETAILS.${cat}.${name} が空です。この部位だけ無地になります`);
+  }
+  // 逆向き。使われない線を書いても気づけないので。
+  for (const name of Object.keys(DETAILS[cat] || {})) {
+    ok(name in set, `DETAILS.${cat}.${name} に対応する型紙がありません`);
   }
 }
 
