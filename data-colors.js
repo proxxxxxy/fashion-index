@@ -161,15 +161,15 @@ const RECIPES = [
   { id: 'r08', name: 'サックスと紺',     tags: ['kireime', 'trad'],   colors: ['sax', 'navy', 'white'],          note: '顔が最も明るく見える組。面接や初対面はこれで足ります' },
   { id: 'r09', name: 'ボルドーを足す',   tags: ['trad', 'kireime'],   colors: ['gray', 'charcoal', 'bordeaux'],  note: '差し色でありながら暗い色。締まりを保ったまま色が入ります' },
   { id: 'r10', name: '黒とグレー',       tags: ['street', 'mode'],    colors: ['black', 'gray', 'black'],        note: '上下の明暗を逆にした形。上半身が細く見えます' },
-  { id: 'r11', name: '砂と空',           tags: ['gorpcore', 'casual'],colors: ['beige', 'denim', 'ecru'],        note: '全体が明るく、夏に効きます。締まりが無いので鞄か時計を黒に' },
+  { id: 'r11', name: '砂と空',           tags: ['gorpcore', 'casual'],colors: ['beige', 'denim', 'brown'],       note: '全体が明るく、夏に効きます。足元を茶で締めること。淡色だけで通す形は例外の側にあります' },
   { id: 'r12', name: 'カーキと黒',       tags: ['street', 'military'],colors: ['black', 'khaki', 'black'],       note: '軍ものを街に寄せる定番。カーキの面積を下に置くのが要点' },
   { id: 'r13', name: '赤を靴下に',       tags: ['casual', 'trad'],    colors: ['ecru', 'navy', 'red'],           note: '最も強い色を最も小さい面積に。原則05 の実演です' },
   { id: 'r14', name: 'マスタードの上',   tags: ['vintage', 'casual'], colors: ['mustard', 'brown', 'brown'],     note: '差し色を上に置く、この20組で唯一の例外。原則05 を承知で外しています。下と足元を同じ暗い茶で固め、視線が上で止まる分を受けてください' },
   { id: 'r15', name: '深緑と紺',         tags: ['trad', 'military'],  colors: ['green', 'navy', 'brown'],        note: '暗い色どうし。色相は離れているのに揃うのは、トーンが同じだから' },
   { id: 'r16', name: '全身インディゴ',   tags: ['amekaji', 'vintage'],colors: ['indigo', 'indigo', 'brown'],     note: '同じ色でも素材（シャツとデニム）を変えて立体を出す。原則07' },
-  { id: 'r17', name: '灰と空',           tags: ['minimal', 'kireime'],colors: ['sax', 'gray', 'lightgray'],      note: '全体が淡い。輪郭が消えるので、サイズだけは詰めてください' },
+  { id: 'r17', name: '灰と空',           tags: ['minimal', 'kireime'],colors: ['sax', 'gray', 'navy'],           note: '寒色だけで組み、足元の紺で締めます。靴まで淡くすると輪郭が消えます' },
   { id: 'r18', name: '黒と橙',           tags: ['gorpcore', 'street'],colors: ['black', 'charcoal', 'orange'],   note: '山の道具の配色をそのまま街へ。橙は靴か鞄の一点だけ' },
-  { id: 'r19', name: 'ピンクを混ぜる',   tags: ['mode', 'y2k'],       colors: ['pink', 'gray', 'lightgray'],     note: 'くすんだピンクはグレーと同じ場所にいます。鮮やかなピンクだと成立しません' },
+  { id: 'r19', name: 'ピンクを混ぜる',   tags: ['mode', 'y2k'],       colors: ['pink', 'gray', 'charcoal'],      note: 'くすんだピンクはグレーと同じ場所にいます。鮮やかなピンクだと成立しません。足元は必ず暗く' },
   { id: 'r20', name: '紫を仕込む',       tags: ['mode', 'street'],    colors: ['black', 'purple', 'black'],      note: '最も難しい色。黒で挟むと、色みだけが残って浮きません' },
 ];
 
@@ -204,10 +204,15 @@ const EXCEPTIONS = [
     why: '温度差が問題になるのは、明度が近いときです。明度を離すと、見る側は温度より先に段差を読みます。',
     cond: '灰とベージュの明度差を15以上空けること。近いと、どちらもくすんで見えます。' },
 
-  { id: 'x6', name: '白に白',         colors: ['white', 'white', 'white'],      breaks: '06',
+  { id: 'x6', name: '白に白',         colors: ['white', 'white', 'white'],      breaks: '04 / 06',
     myth: '',
-    why: '全身一色は原則06 が禁じる形ですが、色を0にしたまま素材だけ変えると、色数を増やさずに立体が出ます。色ではなく光沢で段差を作る形です。',
+    why: '全身一色（06）で、しかも暗い錨がありません（04）。それでも成立するのは、色を0にしたまま素材だけ変えると、色数を増やさずに立体が出るからです。色ではなく光沢で段差を作る形です。',
     cond: '素材を3つ変えること（織り・編み・革など）。同じ素材で揃えると、そのまま作業着です。' },
+
+  { id: 'x9', name: '淡色だけで通す', colors: ['beige', 'denim', 'ecru'],       breaks: '04',
+    myth: '',
+    why: '全身で最も暗い色が明度62で、締まる場所がありません。夏の日中だけ成立します。光が強い場所では、暗い錨がなくても影が輪郭を作ってくれるからです。',
+    cond: '鞄・時計・ベルトのどれかを黒か濃茶にして、体の外側に錨を置くこと。それも淡いと、輪郭ごと消えます。' },
 
   { id: 'x7', name: '紺にオレンジ',   colors: ['navy', 'navy', 'orange'],       breaks: '',
     myth: '補色は喧嘩する',
