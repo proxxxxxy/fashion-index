@@ -12,10 +12,11 @@ const read = f => fs.readFileSync(path.join(root, f), 'utf8');
 // 外から読めません。連結してから、末尾で外に出します。
 const src = [
   read('garment.js'),
+  read('judge.js'),
   read('data-colors.js'),
   read('data-styles.js'),
-  'globalThis.__out = { SWATCHES, SWATCH_GROUPS, STYLES, PRINCIPLES, RECIPES, TERMS,' +
-  ' TOPS, OUTERS, BOTTOMS, SHOES, HATS, DETAILS, garmentSVG };',
+  'globalThis.__out = { SWATCHES, SWATCH_GROUPS, STYLES, PRINCIPLES, RECIPES, TERMS, EXCEPTIONS,' +
+  ' TOPS, OUTERS, BOTTOMS, SHOES, HATS, DETAILS, garmentSVG, judge };',
 ].join('\n;\n');
 
 const ctx = { globalThis: null, console };
@@ -23,8 +24,8 @@ ctx.globalThis = ctx;
 vm.createContext(ctx);
 vm.runInContext(src, ctx, { filename: 'data' });
 
-const { SWATCHES, SWATCH_GROUPS, STYLES, PRINCIPLES, RECIPES, TERMS,
-        TOPS, OUTERS, BOTTOMS, SHOES, HATS, DETAILS, garmentSVG } = ctx.__out;
+const { SWATCHES, SWATCH_GROUPS, STYLES, PRINCIPLES, RECIPES, TERMS, EXCEPTIONS,
+        TOPS, OUTERS, BOTTOMS, SHOES, HATS, DETAILS, garmentSVG, judge } = ctx.__out;
 
 const fails = [];
 const ok = (cond, msg) => { if (!cond) fails.push(msg); };
@@ -75,6 +76,63 @@ for (const p of PRINCIPLES) {
 }
 
 ok(TERMS.length > 0, 'TERMS が空');
+
+// 例外。条件を書かずに例外だけ並べると、真似した人が外します。
+// 「何を破っているか」は原則番号か通説のどちらかで必ず名指しします。
+for (const x of EXCEPTIONS) {
+  ok(x.colors.length === 3, `${x.id}: colors は 3 色`);
+  x.colors.forEach(c => ok(swatchIds.has(c), `${x.id}: 未知の色 ${c}`));
+  ok(!!x.why && x.why.length >= 40, `${x.id}: why が短すぎます（なぜ成立するのかを書く欄）`);
+  ok(!!x.cond && x.cond.length >= 20, `${x.id}: cond が空です。条件なしの例外は真似できません`);
+  ok(!!(x.breaks || x.myth), `${x.id}: breaks も myth も無い。何を破っているのか不明です`);
+  ok(!(x.breaks && x.myth), `${x.id}: breaks と myth の両方は書きません`);
+  // 原則番号を書くなら、実在する番号であること。
+  if (x.breaks) {
+    for (const n of x.breaks.split('/').map(s => s.trim())) {
+      ok(PRINCIPLES.some(p => p.num === n), `${x.id}: 原則 ${n} は存在しません`);
+    }
+  }
+}
+
+// 例外の主張と、実際の診断が合っているか。ここがずれると、
+// 「原則05 を破る」と書いた札の隣で診断が「通ります」と言う画面になります。
+// judge.js を独立させたのは、この検算を画面なしで回すためです。
+const bySwatch = id => SWATCHES.find(c => c.id === id);
+for (const x of EXCEPTIONS) {
+  const j = judge(...x.colors.map(bySwatch));
+  const badMarks = [...new Set(j.notes.filter(n => n.kind === 'bad').map(n => n.mark))].sort();
+
+  if (x.breaks) {
+    const claimed = x.breaks.split('/').map(t => t.trim()).sort();
+    ok(claimed.join(',') === badMarks.join(','),
+       `${x.id}「${x.name}」: 原則 ${claimed.join('/')} を破ると書いていますが、`
+       + `診断が落とすのは ${badMarks.join('/') || 'なし'} です`);
+  } else {
+    // 通説を破る組は、この索引の原則では通らなければいけません。
+    ok(badMarks.length === 0,
+       `${x.id}「${x.name}」: 通説の例外としていますが、原則 ${badMarks.join('/')} で落ちます`);
+  }
+}
+
+// 収録した20組も同じ突き合わせをします。r14 だけは意図した例外です。
+{
+  const flagged = RECIPES.filter(r => judge(...r.colors.map(bySwatch)).bad > 0).map(r => r.id);
+  ok(flagged.length === 1 && flagged[0] === 'r14',
+     `RECIPES と診断の食い違いが ${flagged.join(',') || 'なし'}。意図した例外は r14 だけです`);
+}
+
+// 全通り。例外を投げず、必ず1つ以上の指摘を返すこと。
+{
+  let crashed = 0, silent = 0;
+  for (const a of SWATCHES) for (const b of SWATCHES) for (const c of SWATCHES) {
+    for (const h of [null, ...SWATCHES]) {
+      try { const j = judge(a, b, c, h); if (!j.notes.length) silent++; }
+      catch { crashed++; }
+    }
+  }
+  ok(crashed === 0, `judge が ${crashed} 通りで例外を投げます`);
+  ok(silent === 0, `judge が ${silent} 通りで何も言いません`);
+}
 
 // 色見本の群。ちょうど 1 回ずつ現れないと、選べない色か二重に出る色ができます。
 const grouped = SWATCH_GROUPS.flatMap(g => g.ids);

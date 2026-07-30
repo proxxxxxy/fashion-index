@@ -21,7 +21,7 @@
      どちらも縦線が太く横線が細いので、同じ活字に見えます。
      ゴシックは見出しではなくラベルと本文の実務だけに使います。 -->
 <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Zen+Old+Mincho:wght@400;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=8">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
@@ -139,6 +139,21 @@
   </div>
   <div class="recipe-filter" id="recipe-filter"></div>
   <div class="recipe-grid" id="recipe-grid"></div>
+
+  <div class="exceptions">
+    <div class="exceptions-head">
+      <p class="ex-kicker">EXCEPTIONS</p>
+      <h3>破ってよい場合</h3>
+      <p>
+        通説が駄目だと言う組、あるいはこの索引の原則を破る組です。
+        それでも成立しますが、<b>条件があります</b>。条件を読まずに例外だけ真似ると外します。
+        <br>
+        なお、これらを「配色を試す」に入れると診断は落とします。それは正しい動作です。
+        <b>落ちる理由が分かっていて選ぶのが例外で、知らずに選ぶのは失敗です。</b>
+      </p>
+    </div>
+    <div class="exception-grid" id="exception-grid"></div>
+  </div>
 </section>
 
 <!-- ───────── 試す ───────── -->
@@ -196,7 +211,10 @@
         <div class="swatches" id="sw-shoes"></div>
       </div>
       <div class="lab-actions">
-        <button type="button" class="btn" id="btn-random">引き直す</button>
+        <!-- 当たりを引く。総当たりで探すのではなく、引いて診断に通ったものだけ
+             残します。原則を書いた側が、その原則で自分を試す形です。 -->
+        <button type="button" class="btn" id="btn-good">整った組を引く</button>
+        <button type="button" class="btn btn-ghost" id="btn-random">でたらめに引く</button>
         <button type="button" class="btn btn-ghost" id="btn-share">この配色のリンク</button>
       </div>
     </div>
@@ -231,9 +249,10 @@
 
 <div class="toast" id="toast" aria-live="polite"></div>
 
-<script src="garment.js?v=8"></script>
-<script src="data-colors.js?v=8"></script>
-<script src="data-styles.js?v=8"></script>
-<script src="app.js?v=8"></script>
+<script src="garment.js?v=11"></script>
+<script src="judge.js?v=11"></script>
+<script src="data-colors.js?v=11"></script>
+<script src="data-styles.js?v=11"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>

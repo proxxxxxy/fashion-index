@@ -203,6 +203,52 @@ function renderRecipes() {
   });
 }
 
+/* ── 例外 ───────────────────────────────────── */
+
+function renderExceptions() {
+  const grid = $('#exception-grid');
+  if (!grid || typeof EXCEPTIONS === 'undefined') return;
+
+  grid.innerHTML = EXCEPTIONS.map((x, i) => {
+    const cols = x.colors.map((cid, n) => {
+      const c = swatch(cid);
+      return `<span style="background:${c.hex}" data-label="${SLOT_LABELS[n]}"></span>`;
+    }).join('');
+    const names = x.colors.map(cid => swatch(cid).name).join(' · ');
+
+    // 何を破っているのか。通説なら通説、原則なら番号で名指しします。
+    const tag = x.breaks
+      ? `<span class="ex-breaks">原則 ${esc(x.breaks)} を破る</span>`
+      : `<span class="ex-breaks ex-myth">通説では「${esc(x.myth)}」</span>`;
+
+    return `
+      <article class="exception" style="--rot:${tilt(i + 150)};--stagger:${stagger(i)}">
+        <div class="ex-colors" aria-hidden="true">${cols}</div>
+        <div class="ex-body">
+          <h4 class="ex-name">${esc(x.name)}</h4>
+          ${tag}
+          <p class="ex-names">${esc(names)}</p>
+          <p class="ex-why">${esc(x.why)}</p>
+          <p class="ex-cond"><b>条件</b>${esc(x.cond)}</p>
+          <button type="button" class="ex-try" data-try="${esc(x.colors.join('-'))}">
+            これを試着に入れる
+          </button>
+        </div>
+      </article>`;
+  }).join('');
+
+  // 例外を診断に入れると落ちます。落ちるところまで見せるのが目的です。
+  grid.addEventListener('click', e => {
+    const b = e.target.closest('[data-try]');
+    if (!b) return;
+    const [t, bo, s] = b.dataset.try.split('-');
+    pick.top = t; pick.bottom = bo; pick.shoes = s;
+    hatOn = false;
+    syncLab();
+    location.hash = labHash();
+  });
+}
+
 /* ── 用語 ───────────────────────────────────── */
 
 function renderTerms() {
@@ -286,113 +332,6 @@ function syncLab() {
   renderVerdict(t, b, s, h);
 }
 
-/* この索引の原則を、そのまま判定に落としたもの。
-   点を競うためではなく、なぜ揃わないのかを言葉にするために書いています。 */
-function judge(t, b, s, h = null) {
-  const notes = [];
-  const add = (kind, mark, text) => notes.push({ kind, mark, text });
-
-  // 帽子はかぶっているときだけ数に入れます。
-  const all = h ? [t, b, s, h] : [t, b, s];
-  const chromatic = all.filter(c => !c.neutral);
-  const uniqueChromatic = [...new Set(chromatic.map(c => c.id))];
-
-  // 原則02 — 色数
-  if (uniqueChromatic.length === 0) {
-    add('good', '02', '色みのある色が 0。事故は起きませんが、このままだと平板です。素材か形で差をつけてください。');
-  } else if (uniqueChromatic.length <= 2) {
-    add('good', '02', `色みのある色は ${uniqueChromatic.length} つ。3 つまでの範囲に収まっています。`);
-  } else {
-    add('bad', '02', `色みのある色が ${uniqueChromatic.length} つあります。${chromatic[0].name}か${chromatic[chromatic.length - 1].name}のどちらかを、無彩色に置き換えてください。`);
-  }
-
-  // 原則04 — 上下の明度差
-  const d = Math.abs(t.lightness - b.lightness);
-  if (d < 12) {
-    add('good', '04', '上下の明るさがほぼ同じ。縦に一本通って、最も背が高く見える形です。ただし素材を変えないと、のっぺりします。');
-  } else if (d > 45) {
-    if (t.lightness > b.lightness) {
-      add('good', '04', `上が明るく下が暗い（差 ${d}）。重心が下がって落ち着く、最も外れない形です。`);
-    } else {
-      add('good', '04', `上が暗く下が明るい（差 ${d}）。軽く、脚が長く見えますが、上半身は細く見えます。`);
-    }
-  } else {
-    add('good', '04', `上下の明度差は ${d}。中庸です。もっと締めたいなら差を広げてください。`);
-  }
-
-  // 原則05 — 差し色の位置
-  // 「強い色」は明るさでは決まりません。ボルドーもパープルも色としては強いのに、
-  // 暗いので胸元にあっても騒ぎません。vivid（手で付けた強さ）と明るさの両方を見ます。
-  const loud = c => c.vivid && c.lightness > 35;
-  // 帽子は顔から最も近い位置です。強い色をここに置くのが最も外れます。
-  if (h && loud(h)) {
-    add('bad', '05', `${h.name}の帽子。顔から最も近い場所に最も強い色があるので、視線が顔まで届きません。帽子は無彩色か、暗い色にしてください。`);
-  }
-  if (loud(t) && !loud(s)) {
-    add('bad', '05', `${t.name}が胸にあります。顔の近くの強い色は、視線をそこで止めます。足元か小物に移せるなら、そのほうが効きます。`);
-  } else if (loud(s)) {
-    add('good', '05', `${s.name}が足元。最も小さい面積に最も強い色が来ていて、意図に見えます。`);
-  }
-
-  // 原則06 — 色の反復
-  // 全身一色は t.id === s.id でもあるので、必ず先に見ます。
-  // 順番を入れ替えると、全身黒が「2か所の反復」として褒められます。
-  if (t.id === b.id && b.id === s.id) {
-    add('bad', '06', `全身が${t.name}一色。素材で差をつけない限り、作業着か制服に見えます。どこか一か所を替えてください。`);
-  } else if (t.id === s.id) {
-    add('good', '06', `${t.name}が上と足元の 2 か所に。離れた 2 か所の反復は、偶然ではなく意図として読まれます。`);
-  }
-
-  // 帽子は反復の相手として最も使いやすい部位です。上下から最も離れているので。
-  if (h) {
-    if (h.id === s.id && h.id !== t.id) {
-      add('good', '06', `帽子と足元が同じ${h.name}。全身の両端で同じ色が鳴るので、間にある色が落ち着きます。`);
-    } else if (h.id === b.id && h.id !== t.id) {
-      add('good', '06', `帽子と下が同じ${h.name}。上を挟む形になって、縦のつながりが出ます。`);
-    } else if (h.id === t.id) {
-      add('bad', '06', `帽子と上が同じ${h.name}で、しかも隣り合っています。頭と胴が一続きに見えるので、どちらかを変えてください。`);
-    }
-
-    // 帽子が全身で最も明るいと、重心が頭に上がります。
-    if (h.lightness > 78 && h.lightness - Math.max(t.lightness, b.lightness, s.lightness) > 12) {
-      add('bad', '04', `帽子が全身で最も明るい。視線が頭の上で止まって、重心が浮きます。帽子は上着より暗いほうが収まります。`);
-    }
-  }
-
-  // 原則03 — トーン
-  // 暖色と寒色が混ざること自体は失敗ではありません。原則03 が言っているのは
-  // 「色相を散らすならトーンを揃える」で、揃っていれば深緑と茶は同居します。
-  // 彩度は持っていないので、明度の開きをトーンのずれの代わりに使います。
-  if (uniqueChromatic.length >= 2) {
-    const warm = chromatic.some(c => c.hue === 'warm');
-    const cool = chromatic.some(c => c.hue === 'cool');
-    const ls = chromatic.map(c => c.lightness);
-    const spread = Math.max(...ls) - Math.min(...ls);
-    if (warm && cool && spread > 18) {
-      add('bad', '03', `暖かい色と冷たい色が、明るさも ${spread} 離れています。色相を散らすならトーンは揃えてください。どちらかに寄せるか、明るさを近づけるかです。`);
-    } else if (warm && cool) {
-      add('good', '03', '暖色と寒色が混ざっていますが、明るさが揃っているので同じ場所に見えます。原則03 の効いている状態です。');
-    }
-  }
-
-  // 足元が一番明るいと、重心が浮きます。
-  // ただし白い靴は最も一般的な靴なので、少し明るい程度では鳴らしません。
-  // 明るい上着 + 白靴（サックス 76 に対し白 95）で鳴ると、実用に耐えなくなります。
-  const brighter = Math.max(t.lightness, b.lightness);
-  if (s.lightness - brighter > 20 && s.lightness > 70) {
-    add('bad', '04', '足元が全身で一番明るい。重心が上がって落ち着きません。白い靴を履くなら、上にも白を置いて釣り合わせてください。');
-  }
-
-  // 上下とも同一色でセットアップに見せる場合の注意
-  if (t.id === b.id && t.id !== s.id) {
-    add('good', '07', `上下が同じ${t.name}。同じ素材なら一着に見え、違う素材なら色数を増やさずに立体が出ます。狙って選んでください。`);
-  }
-
-  const bad = notes.filter(n => n.kind === 'bad').length;
-  const title = bad === 0 ? '通ります' : bad === 1 ? '惜しい' : '組み直し';
-  return { title, bad, notes };
-}
-
 function renderVerdict(t, b, s, h = null) {
   const v = judge(t, b, s, h);
   const line = (h ? [h.name] : []).concat([t.name, b.name, s.name]).join(' · ');
@@ -415,8 +354,51 @@ function labHash() {
   return `#/lab/${hatOn ? base + '-' + pick.hat : base}`;
 }
 
+/* 当たりを引く。
+   総当たりの表を持たず、引いて診断に通ったものだけ残します。原則を書いた側が
+   その原則で自分を試す形なので、原則を直せば当たりの中身も勝手に変わります。
+
+   無彩色だけの組は必ず通るので、それだけが出続けると道具になりません。
+   色みのある色を 1 つ以上含むことを条件に足しています。 */
+function drawGoodCombo() {
+  const r = () => SWATCHES[Math.floor(Math.random() * SWATCHES.length)];
+  const before = `${pick.top}-${pick.bottom}-${pick.shoes}-${hatOn ? pick.hat : ''}`;
+
+  for (let i = 0; i < 600; i++) {
+    const t = r(), b = r(), s = r();
+    const h = hatOn ? r() : null;
+    const j = judge(t, b, s, h);
+    if (j.bad !== 0) continue;
+
+    const chromatic = [t, b, s, ...(h ? [h] : [])].filter(c => !c.neutral);
+    if (!chromatic.length) continue;                    // 無彩色だけは面白くない
+
+    const after = `${t.id}-${b.id}-${s.id}-${h ? h.id : ''}`;
+    if (after === before) continue;                     // 同じ組は引き直し
+
+    pick.top = t.id; pick.bottom = b.id; pick.shoes = s.id;
+    if (h) pick.hat = h.id;
+    return true;
+  }
+  return false;
+}
+
 function bindLabActions() {
   $('#btn-hat').addEventListener('click', () => { hatOn = !hatOn; syncLab(); });
+
+  $('#btn-good').addEventListener('click', () => {
+    if (drawGoodCombo()) {
+      syncLab();
+    } else {
+      // 600 回引いて出ないのは、原則の側が厳しすぎるということです。
+      // 黙って何もしないと壊れて見えるので、収録済みの組に逃がします。
+      const rec = RECIPES[Math.floor(Math.random() * RECIPES.length)];
+      [pick.top, pick.bottom, pick.shoes] = rec.colors;
+      hatOn = false;
+      syncLab();
+      toast(`収録済みの「${rec.name}」を出しました`);
+    }
+  });
 
   $('#btn-random').addEventListener('click', () => {
     const r = () => SWATCHES[Math.floor(Math.random() * SWATCHES.length)].id;
@@ -544,6 +526,7 @@ function init() {
   renderStyles();
   renderPrinciples();
   renderRecipes();
+  renderExceptions();
   renderTerms();
   renderSwatchPickers();
   bindLabActions();
