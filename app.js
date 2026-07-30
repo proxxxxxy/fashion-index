@@ -36,12 +36,18 @@ function renderStyles() {
   grid.innerHTML = STYLES.map((s, i) => {
     const band = [...s.palette.base, ...s.palette.accent]
       .map(c => `<span style="background:${esc(c)}"></span>`).join('');
-    // 着装図。写真の代わりで、この系統の典型的な一組を描いています。
-    const fig = s.look ? garmentSVG(s.look, { label: s.name + 'の一例' }) : '';
+    // 系統の説明は、布の厚みや落ち方まで読める実写で見せます。
+    // 色を試すラボの着装図は、選択に合わせて描き直せる SVG のまま残します。
+    const photo = `assets/styles/${encodeURIComponent(s.id)}.jpg`;
+    const lookNo = String(i + 1).padStart(2, '0');
     return `
       <button type="button" class="style-card" data-style="${esc(s.id)}" style="--rot:${tilt(i)};--stagger:${stagger(i)}">
         <span class="card-era">${esc(s.era)}</span>
-        <span class="card-figure">${fig}</span>
+        <span class="card-figure">
+          <img class="style-photo" src="${photo}" alt="${esc(s.name)}の着こなし例"
+               width="768" height="1152" loading="lazy" decoding="async">
+          <span class="photo-index" aria-hidden="true">LOOK ${lookNo}</span>
+        </span>
         <span class="card-band" aria-hidden="true">${band}</span>
         <span class="card-body">
           <span class="card-en">${esc(s.en)}</span>
@@ -70,13 +76,17 @@ function openSheet(id) {
     .filter(Boolean)
     .map(a => `<button type="button" data-style="${esc(a.id)}">${esc(a.name)}</button>`)
     .join('');
+  const photo = `assets/styles/${encodeURIComponent(s.id)}.jpg`;
 
   $('#sheet-content').innerHTML = `
     <h3 id="sheet-title">${esc(s.name)}</h3>
     <p class="s-en">${esc(s.en)} &nbsp;·&nbsp; ${esc(s.era)}</p>
     <div class="s-band" aria-hidden="true">${band}</div>
     <div class="s-lead">
-      <div class="s-figure">${s.look ? garmentSVG(s.look, { label: s.name + 'の一例' }) : ''}</div>
+      <div class="s-figure">
+        <img class="style-photo" src="${photo}" alt="${esc(s.name)}の着こなし例"
+             width="768" height="1152" decoding="async">
+      </div>
       <p class="s-body">${esc(s.body)}</p>
     </div>
     <dl class="s-rows">

@@ -1,6 +1,6 @@
 /* ============================================================
    WARDROBE INDEX
-   紙を切って貼った面に見せるための CSS。画像は一枚も使いません。
+   紙を切って貼った面に見せるための CSS。系統カタログの人物写真以外、
    紙の質感・網点・テープ・ちぎれた縁は、すべてグラデーションと
    clip-path で描いています。
 
@@ -346,7 +346,8 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
 }
 @media (min-width: 760px) {
   .style-card:first-child { grid-column: span 2; }
-  .style-card:first-child .card-figure .garment { max-width: 11rem; }
+  .style-card:first-child .card-figure { height: clamp(21rem, 31vw, 26rem); }
+  .style-card:first-child .style-photo { object-fit: contain; }
   .style-card:first-child .card-name { font-size: 2.1rem; }
   .style-card:first-child .card-one { font-size: .9rem; }
   /* 偶数番のカードをわずかに沈めて、横一線に揃わないようにします。 */
@@ -369,13 +370,28 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
 /* 押した手応え。100〜160ms がちょうどよく、これ以上長いと鈍く感じます。 */
 .style-card:active { transform: rotate(0deg) scale(.97); transition-duration: var(--t-press); }
 
-/* 着装図をカードの頭に。下に配色の帯を敷いて、図と色を同時に読ませます。 */
+/* 人物写真をカードの頭に。下に配色の帯を敷いて、服と色を同時に読ませます。 */
 .card-figure {
-  display: block; background: var(--paper);
-  border-bottom: var(--hair);
-  padding: .5rem 0 0;
+  display: block; position: relative; height: clamp(18rem, 31vw, 22rem);
+  background: var(--paper); border-bottom: var(--hair); overflow: hidden;
 }
-.card-figure .garment { max-width: 8.4rem; margin: 0 auto; }
+.style-photo {
+  display: block; width: 100%; height: 100%; object-fit: cover;
+  object-position: 50% 46%;
+}
+.card-figure::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(20,20,26,.12);
+  background: linear-gradient(180deg, transparent 70%, rgba(20,20,26,.09));
+}
+.photo-index {
+  position: absolute; left: .65rem; bottom: .6rem; z-index: 1;
+  padding: .24rem .46rem; background: rgba(20,20,26,.9); color: var(--paper);
+  font-family: var(--display); font-size: .58rem; font-weight: 800; letter-spacing: .16em;
+}
+@media (max-width: 559px) {
+  .card-figure { height: auto; aspect-ratio: 2 / 3; }
+}
 
 .card-band { display: flex; height: 1.5rem; }
 .card-band span { flex: 1; }
@@ -865,13 +881,16 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
 .sheet .s-en { margin: 0 0 1rem; font-family: var(--display); font-style: italic; font-size: .7rem; letter-spacing: .2em; color: var(--ink-faint); }
 .sheet .s-band { display: flex; height: 3.2rem; margin-bottom: 1.2rem; }
 .sheet .s-band span { flex: 1; }
-/* 詳細では、着装図を本文の横に置きます。細い画面では上に回します。 */
-.s-lead { display: grid; grid-template-columns: 9rem 1fr; gap: 1.2rem; margin-bottom: 1.4rem; align-items: start; }
-.s-figure { border: var(--hair); background: var(--paper-hi); padding: .5rem .3rem 0; }
+/* 詳細では、実写の着こなしを本文の横に置きます。細い画面では上に回します。 */
+.s-lead { display: grid; grid-template-columns: 13rem 1fr; gap: 1.4rem; margin-bottom: 1.4rem; align-items: start; }
+.s-figure {
+  height: 19.5rem; border: var(--hair); background: var(--paper-hi);
+  overflow: hidden; box-shadow: 5px 6px 0 rgba(20,20,26,.09);
+}
 .sheet .s-body { font-family: var(--jp-serif); font-size: .95rem; line-height: 2.1; margin: 0; max-width: 34em; }
 @media (max-width: 560px) {
   .s-lead { grid-template-columns: 1fr; }
-  .s-figure { max-width: 9rem; }
+  .s-figure { width: min(100%, 15rem); height: 22.5rem; }
 }
 
 .s-rows { display: grid; gap: .9rem; margin-bottom: 1.4rem; }
