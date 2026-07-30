@@ -24,7 +24,10 @@ const STYLES = [
       note: "紺と黒で面を作り、白で抜く。彩度の低い青を一点だけ足して冷たさを保ちます。"
     },
     pitfall: "上下ともきれいめで固めると制服に見えます。ジャケットはそのままに、インナーを厚手のTシャツへ落とすか、靴をスニーカーへ替える。崩すのは一箇所だけにしてください。",
-    adjacent: ["minimal", "trad", "mode"]
+    adjacent: ["minimal", "trad", "mode"],
+    // 明るいシャツに濃紺。上を明るく下を暗くする、最も外れない形そのものです。
+    look: { top: "shirt", outer: "none", bottom: "slim", shoe: "low",
+            colors: { top: "#f0ece2", bottom: "#22293f", shoe: "#5c4433" } }
   },
   {
     id: "casual",
@@ -50,7 +53,10 @@ const STYLES = [
       note: "デニムの青と生成りが土台です。差し色は煉瓦色を一点だけ、面積は小さく。"
     },
     pitfall: "無難を狙って全部を中間色にすると、輪郭がぼやけて部屋着に見えます。濃紺か黒をどこか一点に入れて明暗の差を作り、靴だけは新しいものを履いてください。",
-    adjacent: ["amekaji", "kireime", "vintage"]
+    adjacent: ["amekaji", "kireime", "vintage"],
+    // 白とインディゴ。足元で白を繰り返して、色を増やさずに理由を作ります。
+    look: { top: "tee", outer: "none", bottom: "denim", shoe: "low",
+            colors: { top: "#f0ece2", bottom: "#35486b", shoe: "#eae5da" } }
   },
   {
     id: "amekaji",
@@ -77,7 +83,10 @@ const STYLES = [
       note: "インディゴと革の茶が基本で、赤はタグやチェック柄の中に閉じ込めます。"
     },
     pitfall: "ブーツもデニムもロゴも一つずつが主張の強い品なので、三つ揃うと重くなります。主役を一つだけ決め、残りは無地とワンウォッシュで受けてください。",
-    adjacent: ["casual", "work", "vintage"]
+    adjacent: ["casual", "work", "vintage"],
+    // 上下ともインディゴ。素材（デニムジャケットとデニム）で濃さを変えて立体を出します。
+    look: { top: "shirt", outer: "jacket", bottom: "denim", shoe: "low",
+            colors: { top: "#e8e2d4", outer: "#3d5379", bottom: "#2b3b57", shoe: "#6b4f3a" } }
   },
   {
     id: "trad",
@@ -103,7 +112,10 @@ const STYLES = [
       note: "紺のブレザーとベージュのチノが土台。臙脂と深緑はタイと靴下だけに。"
     },
     pitfall: "古典に忠実すぎて全身が完成品になると、扮装に見えます。ネクタイを外す、靴下だけ柄物にするなど、一箇所だけ現代の抜けを作ってください。",
-    adjacent: ["kireime", "amekaji", "casual"]
+    adjacent: ["kireime", "amekaji", "casual"],
+    // 紺のジャケットにサックスのシャツ、チノ。顔が最も明るく見える組です。
+    look: { top: "shirt", outer: "tailored", bottom: "slim", shoe: "low",
+            colors: { top: "#a8c4dd", outer: "#232a40", bottom: "#c3ad8a", shoe: "#5c4433" } }
   },
   {
     id: "street",
@@ -129,7 +141,10 @@ const STYLES = [
       note: "黒と杢グレーで面を埋め、蛍光に近い赤や黄はロゴの中だけで光らせます。"
     },
     pitfall: "上下ともダボつかせると体の位置が分からなくなり、ただ大きい服になります。パンツを細くするか丈を詰めて、足首を出してください。",
-    adjacent: ["y2k", "gorpcore", "work"]
+    adjacent: ["y2k", "gorpcore", "work"],
+    // 黒で挟んでグレーを中に。上が大きく下が細い Y ではなく、太さを下に置きます。
+    look: { top: "hoodie", outer: "jacket", bottom: "wide", shoe: "low",
+            colors: { top: "#8c8f94", outer: "#1f1f24", bottom: "#2a2a30", shoe: "#eae5da" } }
   },
   {
     id: "mode",
@@ -155,7 +170,10 @@ const STYLES = [
       note: "黒に黒を重ね、素材の艶の差だけで濃淡を作ります。灰は境目の役です。"
     },
     pitfall: "黒を集めただけでは喪服になります。マットなウールと光沢のあるキュプラのように、質感の違う黒を二種類以上混ぜて、面の切れ目を見せてください。",
-    adjacent: ["minimal", "street", "kireime"]
+    adjacent: ["minimal", "street", "kireime"],
+    // 黒を3つの濃さで重ね、足元だけキャメル。全身黒の唯一の抜け道です。
+    look: { top: "knit", outer: "coat", bottom: "slim", shoe: "low",
+            colors: { top: "#2c2c34", outer: "#17171c", bottom: "#1c1c22", shoe: "#a97c46" } }
   },
   {
     id: "minimal",
@@ -181,7 +199,10 @@ const STYLES = [
       note: "生成りと墨黒の二色で構成し、中間のグレージュで境界を和らげます。"
     },
     pitfall: "削りすぎると安い無地の量産品と見分けがつかなくなります。肩線の位置と首まわりの詰まり方だけは妥協せず、必ず試着で確かめて選んでください。",
-    adjacent: ["mode", "kireime", "casual"]
+    adjacent: ["mode", "kireime", "casual"],
+    // 色を 0 にして明度だけで組みます。素材で差をつけないと平板になる形です。
+    look: { top: "knit", outer: "none", bottom: "slim", shoe: "low",
+            colors: { top: "#c3c5c8", bottom: "#3a3d42", shoe: "#1a1a1c" } }
   },
   {
     id: "military",
@@ -208,7 +229,10 @@ const STYLES = [
       note: "オリーブドラブと暗い茶で地味に固め、錆びた橙を一点だけ差します。"
     },
     pitfall: "上下ともカーキで揃えると本物の作業着に見えます。ジャケットだけ軍物にして、下は黒か紺の無地に。迷彩と大型ポケットの併用も避けてください。",
-    adjacent: ["work", "gorpcore", "street"]
+    adjacent: ["work", "gorpcore", "street"],
+    // オリーブと生成り。カーキを下に置くのが要点で、上に持つと作業着へ寄ります。
+    look: { top: "shirt", outer: "jacket", bottom: "cargo", shoe: "boot",
+            colors: { top: "#e2dcc9", outer: "#4e5236", bottom: "#6b6a4b", shoe: "#4a3628" } }
   },
   {
     id: "work",
@@ -234,7 +258,10 @@ const STYLES = [
       note: "未晒しの茶とシャンブレーの青が土台。赤茶はブーツの革だけで足します。"
     },
     pitfall: "金具の色が銀と真鍮で混ざると途端に素人臭くなります。ボタン、リベット、ベルトの尾錠を全部真鍮か全部銀に揃えるだけで、見え方が締まります。",
-    adjacent: ["amekaji", "military", "vintage"]
+    adjacent: ["amekaji", "military", "vintage"],
+    // 未晒しのダックにシャンブレー。金具の色を混ぜないことが、この系統の生命線です。
+    look: { top: "shirt", outer: "jacket", bottom: "wide", shoe: "boot",
+            colors: { top: "#7f9dc0", outer: "#a58a5e", bottom: "#5c4433", shoe: "#3d2e22" } }
   },
   {
     id: "gorpcore",
@@ -261,7 +288,10 @@ const STYLES = [
       note: "深緑と霧の灰で山を写し、遭難時に見つかる橙と青を紐や引手に残します。"
     },
     pitfall: "機能物を三点以上重ねると本気の登山客になります。シェルかフリースのどちらか一つに絞り、残りは綿の無地とスラックスにして街へ引き戻してください。",
-    adjacent: ["military", "street", "minimal"]
+    adjacent: ["military", "street", "minimal"],
+    // 山の道具の配色をそのまま街へ。橙は足元の一点だけに絞ります。
+    look: { top: "knit", outer: "shell", bottom: "cargo", shoe: "low",
+            colors: { top: "#8c8f94", outer: "#2f5d4a", bottom: "#2a2a30", shoe: "#d1682f" } }
   },
   {
     id: "y2k",
@@ -288,7 +318,10 @@ const STYLES = [
       note: "銀と濃紺で金属の質感を作り、蛍光の桃と水色は小物だけに置きます。"
     },
     pitfall: "当時の丈のまま全身を揃えると仮装に見えます。年代物は一点だけにして、残りは現代のサイズで組む。光沢も上下どちらか一方に限ってください。",
-    adjacent: ["street", "vintage", "casual"]
+    adjacent: ["street", "vintage", "casual"],
+    // 銀と濃紺。光沢のある面を上に置くと、この年代の匂いが出ます。
+    look: { top: "tee", outer: "jacket", bottom: "wide", shoe: "low",
+            colors: { top: "#f0ece2", outer: "#b9bcc2", bottom: "#2d3f63", shoe: "#d9d4c6" } }
   },
   {
     id: "vintage",
@@ -315,6 +348,9 @@ const STYLES = [
       note: "洗いで彩度の落ちた土色と褪せた青が土台。赤は褪せた煉瓦色に留めます。"
     },
     pitfall: "年代の違う古着を寄せ集めると仮装になります。年代か出自のどちらかを揃え、インナーと靴だけは新品の無地にして、今の空気を一点混ぜてください。",
-    adjacent: ["amekaji", "work", "y2k"]
+    adjacent: ["amekaji", "work", "y2k"],
+    // 全体が同じだけ褪せています。何色使ってもまとまるのは、トーンが揃うからです。
+    look: { top: "knit", outer: "jacket", bottom: "denim", shoe: "boot",
+            colors: { top: "#c8942f", outer: "#8a6f52", bottom: "#6b86a8", shoe: "#4a3628" } }
   }
 ];

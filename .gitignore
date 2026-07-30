@@ -9,3 +9,6 @@ Thumbs.db
 desktop.ini
 .DS_Store
 .vscode/
+
+# montage.js の出力（生成物）
+garments.svg

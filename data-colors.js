@@ -44,6 +44,24 @@ const SWATCHES = [
   { id: 'purple',    name: 'パープル',      hex: '#4c3b63', lightness: 28, hue: 'cool',    neutral: false, vivid: true,  note: '扱いが難しい分、効いたときは強い' },
 ];
 
+// 色見本の並び。ただ23個を並べると、選ぶ側にどれが土台でどれが差し色なのかが
+// 伝わりません。まず「土台」を選び、そこに色を重ねる順に読めるよう組みます。
+// tools/check.js が、全部の色がちょうど1回ずつ現れることを見張っています。
+const SWATCH_GROUPS = [
+  { label: '土台',   note: '面積の 70 と 25 を担う色。ここから選びます',
+    ids: ['black', 'charcoal', 'gray', 'lightgray', 'white', 'ecru', 'beige', 'navy'] },
+  { label: '茶',     note: '黒の代わりに締める色',
+    ids: ['camel', 'brown'] },
+  { label: '青',     note: 'デニムとシャツの色',
+    ids: ['indigo', 'denim', 'sax', 'blue'] },
+  { label: '緑',     note: '軍と山の色',
+    ids: ['olive', 'khaki', 'green'] },
+  { label: '暖色',   note: '差し色。5 に置く色',
+    ids: ['bordeaux', 'red', 'orange', 'mustard', 'pink'] },
+  { label: '紫',     note: '最も扱いが難しい',
+    ids: ['purple'] },
+];
+
 // 配色の原則。順番に読むと、上から下へ効き目が細かくなります。
 const PRINCIPLES = [
   {

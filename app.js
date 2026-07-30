@@ -36,9 +36,12 @@ function renderStyles() {
   grid.innerHTML = STYLES.map((s, i) => {
     const band = [...s.palette.base, ...s.palette.accent]
       .map(c => `<span style="background:${esc(c)}"></span>`).join('');
+    // 着装図。写真の代わりで、この系統の典型的な一組を描いています。
+    const fig = s.look ? garmentSVG(s.look, { label: s.name + 'の一例' }) : '';
     return `
       <button type="button" class="style-card" data-style="${esc(s.id)}" style="--rot:${tilt(i)};--stagger:${stagger(i)}">
         <span class="card-era">${esc(s.era)}</span>
+        <span class="card-figure">${fig}</span>
         <span class="card-band" aria-hidden="true">${band}</span>
         <span class="card-body">
           <span class="card-en">${esc(s.en)}</span>
@@ -72,7 +75,10 @@ function openSheet(id) {
     <h3 id="sheet-title">${esc(s.name)}</h3>
     <p class="s-en">${esc(s.en)} &nbsp;·&nbsp; ${esc(s.era)}</p>
     <div class="s-band" aria-hidden="true">${band}</div>
-    <p class="s-body">${esc(s.body)}</p>
+    <div class="s-lead">
+      <div class="s-figure">${s.look ? garmentSVG(s.look, { label: s.name + 'の一例' }) : ''}</div>
+      <p class="s-body">${esc(s.body)}</p>
+    </div>
     <dl class="s-rows">
       <div class="s-row"><dt>SHAPE</dt><dd>${esc(s.silhouette)}</dd></div>
       <div class="s-row"><dt>ITEMS</dt><dd class="tags">${s.keyItems.map(k => `<span>${esc(k)}</span>`).join('')}</dd></div>
@@ -213,11 +219,19 @@ const pick = { top: 'white', bottom: 'navy', shoes: 'brown' };
 
 function renderSwatchPickers() {
   for (const slot of ['top', 'bottom', 'shoes']) {
-    $('#sw-' + slot).innerHTML = SWATCHES.map(c => `
-      <button type="button" class="sw" style="--c:${c.hex}"
+    // 23 個を平らに並べると、どれが土台でどれが差し色か伝わりません。
+    // 群ごとに小さな見出しを付けて、上から読める順にします。
+    $('#sw-' + slot).innerHTML = SWATCH_GROUPS.map(g => `
+      <div class="sw-group">
+        <p class="sw-group-label">${esc(g.label)}<span>${esc(g.note)}</span></p>
+        <div class="sw-row">${g.ids.map(id => {
+          const c = swatch(id);
+          return `<button type="button" class="sw" style="--c:${c.hex}"
               data-slot="${slot}" data-color="${c.id}"
               aria-pressed="${pick[slot] === c.id}"
-              title="${esc(c.name)}" aria-label="${esc(c.name)}"></button>`).join('');
+              title="${esc(c.name)} — ${esc(c.note)}" aria-label="${esc(c.name)}"></button>`;
+        }).join('')}</div>
+      </div>`).join('');
 
     $('#sw-' + slot).addEventListener('click', e => {
       const b = e.target.closest('.sw');
@@ -228,12 +242,18 @@ function renderSwatchPickers() {
   }
 }
 
+/* 試着に使う型。「最初の一組」と同じ形にしています。
+   ここで系統を選ばせると、色の話に形の話が混ざります。 */
+const LAB_LOOK = { top: 'shirt', outer: 'none', bottom: 'slim', shoe: 'low' };
+
 function syncLab() {
   const t = swatch(pick.top), b = swatch(pick.bottom), s = swatch(pick.shoes);
 
-  $('#fig-top').style.background    = t.hex;
-  $('#fig-bottom').style.background = b.hex;
-  $('#fig-shoes').style.setProperty('--shoes-color', s.hex);
+  // 着装図は描き直します。体の上に服を重ねる順は garment.js が持っています。
+  $('#figure').innerHTML = garmentSVG(
+    { ...LAB_LOOK, colors: { top: t.hex, bottom: b.hex, shoe: s.hex } },
+    { label: `上が${t.name}、下が${b.name}、足元が${s.name}の着装図` }
+  );
 
   $('#lab-ratio').innerHTML =
     `<span style="background:${t.hex}"></span><span style="background:${b.hex}"></span><span style="background:${s.hex}"></span>`;

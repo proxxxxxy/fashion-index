@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#efe7d9">
+<meta name="theme-color" content="#e7e4db">
 <meta name="description" content="メンズの服の系統12種と、配色の原則8つ、実際に着られる3色の組20通り。色を選ぶための道具として使える日本語のリファレンスです。">
 <title>WARDROBE INDEX — 服の系統と、色の選び方</title>
 
@@ -21,7 +21,7 @@
      どちらも縦線が太く横線が細いので、同じ活字に見えます。
      ゴシックは見出しではなくラベルと本文の実務だけに使います。 -->
 <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Zen+Old+Mincho:wght@400;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -87,11 +87,11 @@
     </div>
 
     <div class="cut cut-stamp" style="--rot:-8deg" aria-hidden="true">
-      <span>NO<br>IMAGES</span>
+      <span>NO<br>PHOTOS</span>
     </div>
 
     <p class="cut cut-note" style="--rot:-1.6deg">
-      写真は一枚も使っていません。色面と文字だけでできています。
+      写真は一枚も使っていません。着装図はすべて、体の上に服を重ねて描いています。
     </p>
 
   </div>
@@ -150,11 +150,10 @@
 
   <div class="lab">
     <div class="lab-figure">
-      <div class="figure" id="figure">
-        <div class="fig-top"    id="fig-top"></div>
-        <div class="fig-bottom" id="fig-bottom"></div>
-        <div class="fig-shoes"  id="fig-shoes"></div>
-      </div>
+      <!-- 着装図は garment.js が描きます。体を先に置いて服を重ねる方式なので、
+           ここに空の器だけ用意します。 -->
+      <div class="figure" id="figure"></div>
+      <p class="figure-cap">上・下・足元の面積の目安</p>
       <div class="lab-ratio" id="lab-ratio" aria-hidden="true"></div>
     </div>
 
@@ -209,8 +208,9 @@
 
 <div class="toast" id="toast" aria-live="polite"></div>
 
-<script src="data-colors.js?v=2"></script>
-<script src="data-styles.js?v=2"></script>
-<script src="app.js?v=2"></script>
+<script src="garment.js?v=4"></script>
+<script src="data-colors.js?v=4"></script>
+<script src="data-styles.js?v=4"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

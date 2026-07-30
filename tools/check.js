@@ -11,9 +11,11 @@ const read = f => fs.readFileSync(path.join(root, f), 'utf8');
 // データファイルは const で始まるため、同じスクリプトの中で評価しないと
 // 外から読めません。連結してから、末尾で外に出します。
 const src = [
+  read('garment.js'),
   read('data-colors.js'),
   read('data-styles.js'),
-  'globalThis.__out = { SWATCHES, STYLES, PRINCIPLES, RECIPES, TERMS };',
+  'globalThis.__out = { SWATCHES, SWATCH_GROUPS, STYLES, PRINCIPLES, RECIPES, TERMS,' +
+  ' TOPS, OUTERS, BOTTOMS, SHOES, garmentSVG };',
 ].join('\n;\n');
 
 const ctx = { globalThis: null, console };
@@ -21,7 +23,8 @@ ctx.globalThis = ctx;
 vm.createContext(ctx);
 vm.runInContext(src, ctx, { filename: 'data' });
 
-const { SWATCHES, STYLES, PRINCIPLES, RECIPES, TERMS } = ctx.__out;
+const { SWATCHES, SWATCH_GROUPS, STYLES, PRINCIPLES, RECIPES, TERMS,
+        TOPS, OUTERS, BOTTOMS, SHOES, garmentSVG } = ctx.__out;
 
 const fails = [];
 const ok = (cond, msg) => { if (!cond) fails.push(msg); };
@@ -72,6 +75,74 @@ for (const p of PRINCIPLES) {
 }
 
 ok(TERMS.length > 0, 'TERMS が空');
+
+// 色見本の群。ちょうど 1 回ずつ現れないと、選べない色か二重に出る色ができます。
+const grouped = SWATCH_GROUPS.flatMap(g => g.ids);
+ok(grouped.length === new Set(grouped).size, 'SWATCH_GROUPS に重複した色があります');
+for (const id of grouped) ok(swatchIds.has(id), `SWATCH_GROUPS: 未知の色 ${id}`);
+for (const c of SWATCHES) ok(grouped.includes(c.id), `${c.id} がどの群にも入っていません。選択肢に出ません`);
+
+// 着装図。型紙の名前が garment.js に無いと、その系統だけ既定の形で描かれ、
+// 見た目では気づけません。
+for (const s of STYLES) {
+  ok(!!s.look, `${s.id}: look がありません`);
+  if (!s.look) continue;
+  ok(s.look.top    in TOPS,    `${s.id}: 未知の上 "${s.look.top}"`);
+  ok(s.look.outer  in OUTERS,  `${s.id}: 未知の羽織り "${s.look.outer}"`);
+  ok(s.look.bottom in BOTTOMS, `${s.id}: 未知の下 "${s.look.bottom}"`);
+  ok(s.look.shoe   in SHOES,   `${s.id}: 未知の足元 "${s.look.shoe}"`);
+
+  const need = ['top', 'bottom', 'shoe'];
+  if (s.look.outer !== 'none') need.push('outer');
+  for (const k of need) {
+    ok(/^#[0-9a-f]{6}$/i.test(s.look.colors[k] || ''),
+       `${s.id}: look.colors.${k} が不正 (${s.look.colors[k]})`);
+  }
+  // outer が none なのに色を書いていると、直したつもりが効きません。
+  ok(!(s.look.outer === 'none' && s.look.colors.outer),
+     `${s.id}: outer は none なのに colors.outer が書かれています`);
+
+  // 実際に描かせて、閉じた SVG になるかを見ます。
+  const svg = garmentSVG(s.look);
+  ok(svg.trim().startsWith('<svg') && svg.includes('</svg>'), `${s.id}: SVG が組み立てられません`);
+  ok(!svg.includes('undefined'), `${s.id}: SVG に undefined が混ざっています`);
+}
+
+// グラデーションの id は instance ごとに変えないと、同じ画面に複数置いたとき
+// 最初の影が全部に効きます。2 回呼んで id が変わることを確かめます。
+{
+  const a = garmentSVG(STYLES[0].look), b = garmentSVG(STYLES[0].look);
+  const idOf = s => (s.match(/id="(gsh\d+)"/) || [])[1];
+  ok(idOf(a) && idOf(b) && idOf(a) !== idOf(b), 'garmentSVG: 影の id が使い回されています');
+}
+
+// 座標系。中心線が 100 でないと、体と服の型紙が合いません。
+ok(/viewBox="0 0 200 300"/.test(read('garment.js')), 'garment.js: viewBox が 200x300 ではありません');
+
+// 羽織りは前開きでなければいけません。一枚の板にすると、上より大きい分だけ
+// 中の服を覆い隠し、3色のうち1色が絵から消えます。
+// 身頃のどのパーツも中心の通り道（92〜108）を跨がないことを確かめます。
+// フード（Q を含む曲線）は頭を包むので跨いで構いません。
+for (const [name, paths] of Object.entries(OUTERS)) {
+  if (name === 'none') continue;
+  const panels = paths.filter(d => !d.includes('Q'));
+  ok(panels.length >= 2, `OUTERS.${name}: 身頃が ${panels.length} 枚。前開きなら 2 枚必要です`);
+  for (const d of panels) {
+    const n = d.match(/-?\d+(?:\.\d+)?/g).map(Number);
+    const xs = n.filter((_, i) => i % 2 === 0);
+    const left = xs.every(x => x <= 94), right = xs.every(x => x >= 106);
+    ok(left || right,
+       `OUTERS.${name}: 身頃が中心を跨いでいます（x ${Math.min(...xs)}〜${Math.max(...xs)}）。中の服が隠れます`);
+  }
+}
+
+// 羽織りと上が同じ色だと、開けた意味がありません。
+for (const s of STYLES) {
+  if (s.look && s.look.outer !== 'none') {
+    ok(s.look.colors.top !== s.look.colors.outer,
+       `${s.id}: 羽織りと上が同色です。前を開けても違いが出ません`);
+  }
+}
 
 // 白紙事故の見張り。スクロール演出で中身を隠す指定は、必ず html.js の下に
 // なければいけません。素の [data-lazy] に opacity:0 を書くと、
