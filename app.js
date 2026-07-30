@@ -264,10 +264,11 @@ function renderTerms() {
 /* 帽子は既定でかぶりません。かぶらない状態が最も外れないからです。
    hatOn を false のまま色だけ選べるようにしてあるので、
    ON にした瞬間の変化が見えます。 */
-const pick = { top: 'white', bottom: 'navy', shoes: 'brown', hat: 'navy' };
+const pick = { top: 'white', bottom: 'navy', shoes: 'brown', hat: 'navy', outer: 'navy' };
 let hatOn = false;
+let outerOn = false;
 
-const SLOTS = ['hat', 'top', 'bottom', 'shoes'];
+const SLOTS = ['hat', 'outer', 'top', 'bottom', 'shoes'];
 
 function renderSwatchPickers() {
   for (const slot of SLOTS) {
@@ -294,47 +295,117 @@ function renderSwatchPickers() {
   }
 }
 
-/* 試着に使う型。「最初の一組」と同じ形にしています。
-   ここで系統を選ばせると、色の話に形の話が混ざります。 */
-const LAB_LOOK = { top: 'shirt', outer: 'none', bottom: 'slim', shoe: 'low' };
+/* 試着に使う形。既定は「最初の一組」と同じ、シャツに細いパンツです。
+   系統を選ぶと形だけが替わり、色はそのまま持ち越します。
+   同じ配色が系統によってどう見えるかを比べるための作りです。 */
+const BASE_SHAPE = {
+  id: 'base', name: '基本', note: 'シャツに細いパンツ。形の癖がないので、色だけを見たいときに',
+  top: 'shirt', outer: 'none', bottom: 'slim', shoe: 'low', hat: 'none',
+};
+let shapeId = 'base';
+
+// 系統から形だけを取り出します。色は look から読みません。
+function shapes() {
+  const fromStyles = (typeof STYLES === 'undefined' ? [] : STYLES)
+    .filter(s => s.look)
+    .map(s => ({
+      id: s.id, name: s.name, note: s.silhouette,
+      top: s.look.top, outer: s.look.outer, bottom: s.look.bottom,
+      shoe: s.look.shoe, hat: s.look.hat || 'none',
+    }));
+  return [BASE_SHAPE, ...fromStyles];
+}
+
+function currentShape() {
+  return shapes().find(s => s.id === shapeId) || BASE_SHAPE;
+}
+
+function renderShapePicker() {
+  const row = $('#shape-row');
+  if (!row) return;
+  row.innerHTML = shapes().map(s =>
+    `<button type="button" class="shape-chip" data-shape="${esc(s.id)}"
+             aria-pressed="${s.id === shapeId}">${esc(s.name)}</button>`).join('');
+
+  row.addEventListener('click', e => {
+    const b = e.target.closest('[data-shape]');
+    if (!b) return;
+    shapeId = b.dataset.shape;
+    const sh = currentShape();
+    // 形が羽織りを含むなら自動で羽織らせます。含まないなら脱がせます。
+    outerOn = sh.outer !== 'none';
+    hatOn   = sh.hat !== 'none';
+    syncLab();
+  });
+}
 
 function syncLab() {
   const t = swatch(pick.top), b = swatch(pick.bottom), s = swatch(pick.shoes);
-  const h = hatOn ? swatch(pick.hat) : null;
+  const h = hatOn   ? swatch(pick.hat)   : null;
+  const o = outerOn ? swatch(pick.outer) : null;
+  const sh = currentShape();
+
+  // 形が羽織りを持たないなら、羽織りは着せられません。
+  const outerType = (outerOn && sh.outer !== 'none') ? sh.outer
+                  : (outerOn ? 'jacket' : 'none');
+  const hatType   = hatOn ? (sh.hat !== 'none' ? sh.hat : 'cap') : 'none';
 
   const colors = { top: t.hex, bottom: b.hex, shoe: s.hex };
   if (h) colors.hat = h.hex;
+  if (o) colors.outer = o.hex;
 
   // 着装図は描き直します。体の上に服を重ねる順は garment.js が持っています。
   $('#figure').innerHTML = garmentSVG(
-    { ...LAB_LOOK, hat: hatOn ? 'cap' : 'none', colors },
-    { label: (h ? `帽子が${h.name}、` : '') +
-             `上が${t.name}、下が${b.name}、足元が${s.name}の着装図` }
+    { top: sh.top, outer: outerType, bottom: sh.bottom, shoe: sh.shoe, hat: hatType, colors },
+    { label: `${sh.name}の形。` + (h ? `帽子が${h.name}、` : '')
+             + (o ? `羽織りが${o.name}、` : '')
+             + `上が${t.name}、下が${b.name}、足元が${s.name}の着装図` }
   );
 
-  // 面積の目安。帽子は小さいので、5 の側に足します。
+  /* 面積の目安。羽織ると上半身の広い面はそちらになるので、
+     帯の一番大きい区画も羽織りの色に差し替えます。 */
+  const upper = o || t;
   $('#lab-ratio').innerHTML =
-    `<span style="background:${t.hex}"></span><span style="background:${b.hex}"></span>` +
+    `<span style="background:${upper.hex}"></span><span style="background:${b.hex}"></span>` +
     `<span style="background:${s.hex}"></span>` +
     (h ? `<span class="ratio-hat" style="background:${h.hex}"></span>` : '');
 
-  const shown = [['top', t], ['bottom', b], ['shoes', s], ['hat', swatch(pick.hat)]];
+  const shown = [['top', t], ['bottom', b], ['shoes', s],
+                 ['hat', swatch(pick.hat)], ['outer', swatch(pick.outer)]];
   for (const [slot, c] of shown) {
     $('#name-' + slot).textContent =
-      (slot === 'hat' && !hatOn) ? 'かぶらない' : c.name;
+      (slot === 'hat' && !hatOn) ? 'かぶらない'
+      : (slot === 'outer' && !outerOn) ? '羽織らない'
+      : c.name;
     $$('#sw-' + slot + ' .sw').forEach(el =>
       el.setAttribute('aria-pressed', String(el.dataset.color === pick[slot])));
   }
 
   $('#btn-hat').setAttribute('aria-pressed', String(hatOn));
   $('.slot-hat').classList.toggle('is-off', !hatOn);
+  $('#btn-outer').setAttribute('aria-pressed', String(outerOn));
+  $('.slot-outer').classList.toggle('is-off', !outerOn);
 
-  renderVerdict(t, b, s, h);
+  $('#name-shape').textContent = sh.name;
+  $('#shape-note').textContent = sh.note;
+  $$('#shape-row .shape-chip').forEach(el =>
+    el.setAttribute('aria-pressed', String(el.dataset.shape === shapeId)));
+
+  /* 診断に渡す「上」は、羽織っているならその色です。原則01 のとおり、
+     効くのは面積の大きい面で、羽織りの下の上着は前開きから覗く細い帯に
+     なるためです。 */
+  renderVerdict(upper, b, s, h, { inner: o ? t : null, upperLabel: o ? '羽織り' : '上' });
 }
 
-function renderVerdict(t, b, s, h = null) {
+function renderVerdict(t, b, s, h = null, opts = {}) {
   const v = judge(t, b, s, h);
   const line = (h ? [h.name] : []).concat([t.name, b.name, s.name]).join(' · ');
+  // 羽織りの下の上着は、前開きから覗く細い帯です。面積が小さいので
+  // 判定には入れず、そのことだけ言い添えます。
+  const innerLine = opts.inner
+    ? `<p class="verdict-inner">羽織りの下は${esc(opts.inner.name)}。前開きから縦に覗くだけなので、`
+      + `判定には入れていません（原則01・面積が先）。ここは好きな色で構いません。</p>`
+    : '';
   $('#verdict').innerHTML = `
     <div class="verdict-card">
       <div class="verdict-head">
@@ -345,12 +416,18 @@ function renderVerdict(t, b, s, h = null) {
       <ul class="verdict-notes">
         ${v.notes.map(n => `<li class="${n.kind}" data-mark="${esc(n.mark)}">${esc(n.text)}</li>`).join('')}
       </ul>
+      ${innerLine}
     </div>`;
 }
 
 function labHash() {
-  // 帽子をかぶらないときは 3 つのまま。以前に配ったリンクをそのまま生かします。
+  /* 3つ＝色だけ、4つ＝＋帽子、5つ＝＋帽子＋羽織り。
+     4つ目は帽子の位置に固定してあるので、羽織りだけを足したいときは
+     帽子の欄に none を置きます。こうしないと 4 つ目がどちらか分かりません。
+     形（系統）は入れていません。ここは色を決める区画なので、
+     リンクは色の共有に絞っています。 */
   const base = `${pick.top}-${pick.bottom}-${pick.shoes}`;
+  if (outerOn) return `#/lab/${base}-${hatOn ? pick.hat : 'none'}-${pick.outer}`;
   return `#/lab/${hatOn ? base + '-' + pick.hat : base}`;
 }
 
@@ -362,21 +439,23 @@ function labHash() {
    色みのある色を 1 つ以上含むことを条件に足しています。 */
 function drawGoodCombo() {
   const r = () => SWATCHES[Math.floor(Math.random() * SWATCHES.length)];
-  const before = `${pick.top}-${pick.bottom}-${pick.shoes}-${hatOn ? pick.hat : ''}`;
+  const before = `${outerOn ? pick.outer : pick.top}-${pick.bottom}-${pick.shoes}-${hatOn ? pick.hat : ''}`;
 
   for (let i = 0; i < 600; i++) {
-    const t = r(), b = r(), s = r();
+    const upper = r(), b = r(), s = r();
     const h = hatOn ? r() : null;
-    const j = judge(t, b, s, h);
+    // 羽織っているなら、判定に効く上半身の色は羽織りのほうです。
+    const j = judge(upper, b, s, h);
     if (j.bad !== 0) continue;
 
-    const chromatic = [t, b, s, ...(h ? [h] : [])].filter(c => !c.neutral);
+    const chromatic = [upper, b, s, ...(h ? [h] : [])].filter(c => !c.neutral);
     if (!chromatic.length) continue;                    // 無彩色だけは面白くない
 
-    const after = `${t.id}-${b.id}-${s.id}-${h ? h.id : ''}`;
+    const after = `${upper.id}-${b.id}-${s.id}-${h ? h.id : ''}`;
     if (after === before) continue;                     // 同じ組は引き直し
 
-    pick.top = t.id; pick.bottom = b.id; pick.shoes = s.id;
+    pick.bottom = b.id; pick.shoes = s.id;
+    if (outerOn) pick.outer = upper.id; else pick.top = upper.id;
     if (h) pick.hat = h.id;
     return true;
   }
@@ -385,6 +464,7 @@ function drawGoodCombo() {
 
 function bindLabActions() {
   $('#btn-hat').addEventListener('click', () => { hatOn = !hatOn; syncLab(); });
+  $('#btn-outer').addEventListener('click', () => { outerOn = !outerOn; syncLab(); });
 
   $('#btn-good').addEventListener('click', () => {
     if (drawGoodCombo()) {
@@ -402,7 +482,7 @@ function bindLabActions() {
 
   $('#btn-random').addEventListener('click', () => {
     const r = () => SWATCHES[Math.floor(Math.random() * SWATCHES.length)].id;
-    pick.top = r(); pick.bottom = r(); pick.shoes = r(); pick.hat = r();
+    pick.top = r(); pick.bottom = r(); pick.shoes = r(); pick.hat = r(); pick.outer = r();
     syncLab();
   });
 
@@ -436,15 +516,18 @@ function route() {
   const style = h.match(/^#\/style\/([a-z0-9-]+)$/);
   if (style) return openSheet(style[1]);
 
-  // 4 つ目は帽子で、省略できます。3 つのリンクは帽子なしとして開きます。
-  const lab = h.match(/^#\/lab\/([a-z]+)-([a-z]+)-([a-z]+)(?:-([a-z]+))?$/);
+  // 4 つ目は帽子（none 可）、5 つ目は羽織り。どちらも省略できます。
+  const lab = h.match(/^#\/lab\/([a-z]+)-([a-z]+)-([a-z]+)(?:-([a-z]+))?(?:-([a-z]+))?$/);
   if (lab) {
     closeSheet();
-    const [, a, b, c, d] = lab;
-    if (swatch(a) && swatch(b) && swatch(c) && (!d || swatch(d))) {
+    const [, a, b, c, d, e] = lab;
+    const okHat = !d || d === 'none' || !!swatch(d);
+    if (swatch(a) && swatch(b) && swatch(c) && okHat && (!e || swatch(e))) {
       pick.top = a; pick.bottom = b; pick.shoes = c;
-      hatOn = !!d;
-      if (d) pick.hat = d;
+      hatOn = !!d && d !== 'none';
+      if (hatOn) pick.hat = d;
+      outerOn = !!e;
+      if (e) pick.outer = e;
       syncLab();
       $('#lab').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
@@ -528,6 +611,7 @@ function init() {
   renderRecipes();
   renderExceptions();
   renderTerms();
+  renderShapePicker();
   renderSwatchPickers();
   bindLabActions();
   syncLab();

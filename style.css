@@ -1005,3 +1005,47 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
 
   a[href^="#"]::after { content: none; }
 }
+
+/* ── 形（系統）の選択 ─────────────────────────
+   色はそのままで形だけを替えられるようにしています。
+   同じ配色が系統によってどう見えるかを比べるための区画です。 */
+
+.slot-shape { padding-bottom: .9rem; border-bottom: 1px solid var(--rule); }
+.shape-row {
+  display: flex; gap: .3rem; overflow-x: auto; overflow-y: hidden;
+  padding: .15rem .2rem .5rem; margin: 0 -.2rem;
+  overscroll-behavior-x: contain; scrollbar-width: thin;
+  scrollbar-color: var(--rule) transparent;
+}
+.shape-row::-webkit-scrollbar { height: 6px; }
+.shape-row::-webkit-scrollbar-thumb { background: var(--rule); }
+.shape-chip {
+  flex: 0 0 auto; font: inherit; cursor: pointer;
+  font-family: var(--jp-serif); font-weight: 700; font-size: .78rem;
+  white-space: nowrap; padding: .66em .8em;   /* 指で押せる高さ */
+  background: transparent; border: 1.5px solid var(--rule); color: var(--ink-soft);
+  transition: background-color var(--t-hover) var(--ease-out),
+              border-color var(--t-hover) var(--ease-out),
+              color var(--t-hover) var(--ease-out),
+              transform var(--t-press) var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .shape-chip:hover { border-color: var(--ink); color: var(--ink); }
+}
+.shape-chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.shape-chip:active { transform: scale(.97); }
+
+.shape-note {
+  margin: .1rem 0 0; font-family: var(--jp-serif);
+  font-size: .72rem; line-height: 1.75; color: var(--ink-faint);
+}
+
+/* 羽織りは帽子と同じ扱い。有無から決めます。 */
+.slot-outer { padding-bottom: .9rem; border-bottom: 1px solid var(--rule); }
+.slot-outer.is-off .swatches { opacity: .38; }
+
+.verdict-inner {
+  margin: .8rem 0 0; padding-top: .7rem; border-top: var(--hair);
+  font-family: var(--jp-serif); font-size: .76rem; line-height: 1.85;
+  color: var(--ink-faint);
+}

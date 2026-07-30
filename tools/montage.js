@@ -12,16 +12,16 @@ const read = f => fs.readFileSync(path.join(root, f), 'utf8');
 
 const src = [
   read('garment.js'), read('data-colors.js'), read('data-styles.js'),
-  'globalThis.__o = { STYLES, garmentSVG };',
+  'globalThis.__o = { STYLES, garmentSVG, VIEW_BOX };',
 ].join('\n;\n');
 
 const ctx = { console };
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 vm.runInContext(src, ctx, { filename: 'data' });
-const { STYLES, garmentSVG } = ctx.__o;
+const { STYLES, garmentSVG, VIEW_BOX } = ctx.__o;
 
-const COLS = 4, W = 150, H = 225;
+const COLS = 4, W = 150, H = 240;
 const rows = Math.ceil(STYLES.length / COLS);
 
 const cells = STYLES.map((s, i) => {
@@ -29,8 +29,10 @@ const cells = STYLES.map((s, i) => {
   // --form は単体の SVG では解決しないので、実際の値に置き換えます。
   let g = garmentSVG(s.look).replace(/var\(--form,\s*([^)]+)\)/g, '$1');
   g = g.replace(/^\s*<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
+  // 入れ子の svg に viewBox をそのまま渡します。自前で scale すると、
+  // viewBox の原点が負のときにずれます（頭が切れます）。
   return `<g transform="translate(${x},${y})">`
-    + `<g transform="scale(${W / 200},${(H - 26) / 300})">${g}</g>`
+    + `<svg x="0" y="0" width="${W}" height="${H - 26}" viewBox="${VIEW_BOX}">${g}</svg>`
     + `<text x="${W / 2}" y="${H - 8}" font-family="sans-serif" font-size="13"`
     + ` text-anchor="middle" fill="#14141a">${s.name}</text>`
     + `</g>`;

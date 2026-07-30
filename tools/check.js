@@ -177,18 +177,18 @@ for (const s of STYLES) {
 // 座標系。中心線が 100 でないと、体と服の型紙が合いません。
 // y の下限が負なのは、帽子と頭を原点より上に足したためです。既存の型紙は
 // 1 つも動かしていないので、ここを 0 に戻すと頭が切れます。
-ok(/const VIEW_BOX = '0 -52 200 352'/.test(read('garment.js')),
+ok(/const VIEW_BOX = '0 -14 200 336'/.test(read('garment.js')),
    'garment.js: VIEW_BOX が変わっています。頭と帽子が切れないか確かめてください');
 
 // 帽子の型紙。冠と鍔（または折り返し）で 2 枚あるはずです。
 for (const [name, paths] of Object.entries(HATS)) {
   if (name === 'none') continue;
   ok(paths.length >= 1, `HATS.${name}: 型紙が空です`);
-  // 帽子は頭の上、つまり y が負の領域にしか出てきてはいけません。
+  // 帽子は額より上（y <= 34）にしか出てきてはいけません。顎は 44 です。
   for (const d of paths) {
     const n = d.match(/-?\d+(?:\.\d+)?/g).map(Number);
     const ys = n.filter((_, i) => i % 2 === 1);
-    ok(Math.max(...ys) <= 0, `HATS.${name}: y が正の領域（顔より下）に出ています`);
+    ok(Math.max(...ys) <= 34, `HATS.${name}: 帽子が顔の下まで下りています（y ${Math.max(...ys)}）`);
   }
 }
 
@@ -226,14 +226,19 @@ for (const s of STYLES) {
 // 羽織りは前開きでなければいけません。一枚の板にすると、上より大きい分だけ
 // 中の服を覆い隠し、3色のうち1色が絵から消えます。
 // 身頃のどのパーツも中心の通り道（92〜108）を跨がないことを確かめます。
-// フード（Q を含む曲線）は頭を包むので跨いで構いません。
+//
+// 身頃かどうかは「裾まで届いているか」で見ます（最大 y が 120 を超える）。
+// フードや襟は肩より上で閉じるので、跨いで構いません。曲線の種類で
+// 見分けようとして、C で描いたフードを身頃と誤判定したことがあります。
+const yMax = d => Math.max(...d.match(/-?\d+(?:\.\d+)?/g).map(Number).filter((_, i) => i % 2 === 1));
+const xsOf = d => d.match(/-?\d+(?:\.\d+)?/g).map(Number).filter((_, i) => i % 2 === 0);
+
 for (const [name, paths] of Object.entries(OUTERS)) {
   if (name === 'none') continue;
-  const panels = paths.filter(d => !d.includes('Q'));
-  ok(panels.length >= 2, `OUTERS.${name}: 身頃が ${panels.length} 枚。前開きなら 2 枚必要です`);
+  const panels = paths.filter(d => yMax(d) > 120);
+  ok(panels.length >= 2, `OUTERS.${name}: 裾まで届く身頃が ${panels.length} 枚。前開きなら 2 枚必要です`);
   for (const d of panels) {
-    const n = d.match(/-?\d+(?:\.\d+)?/g).map(Number);
-    const xs = n.filter((_, i) => i % 2 === 0);
+    const xs = xsOf(d);
     const left = xs.every(x => x <= 94), right = xs.every(x => x >= 106);
     ok(left || right,
        `OUTERS.${name}: 身頃が中心を跨いでいます（x ${Math.min(...xs)}〜${Math.max(...xs)}）。中の服が隠れます`);
