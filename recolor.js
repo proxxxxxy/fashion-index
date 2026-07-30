@@ -33,14 +33,17 @@
       )
     },
     casual: {
-      top: [poly([.372,.192],[.459,.170],[.559,.176],[.653,.222],[.682,.318],[.644,.390],[.625,.477],[.390,.477],[.377,.388],[.319,.386],[.297,.302],[.327,.223])],
+      top: [poly(
+        [.425,.205],[.535,.205],[.620,.240],[.707,.342],[.622,.383],
+        [.610,.475],[.552,.525],[.360,.525],[.350,.382],[.290,.360],[.340,.250]
+      )],
       bottom: pair(
-        [[.382,.492],[.488,.485],[.482,.861],[.360,.861]],
-        [[.487,.485],[.598,.492],[.635,.860],[.506,.860]]
+        [[.355,.505],[.505,.505],[.507,.560],[.490,.880],[.400,.880],[.360,.580]],
+        [[.490,.505],[.620,.500],[.665,.580],[.690,.880],[.570,.890],[.515,.570]]
       ),
       shoes: pair(
-        [[.355,.862],[.482,.856],[.506,.897],[.340,.904]],
-        [[.509,.858],[.635,.858],[.684,.901],[.512,.901]]
+        [[.392,.875],[.485,.875],[.495,.890],[.515,.905],[.500,.925],[.365,.925],[.350,.915],[.360,.895]],
+        [[.585,.880],[.675,.880],[.740,.915],[.740,.930],[.700,.940],[.570,.925],[.560,.910]]
       )
     },
     amekaji: {
@@ -194,8 +197,21 @@
     }
   };
 
+  const HAT_PLACEMENT = {
+    kireime:  { x: .48, y: .010, w: .180, angle: -3 },
+    casual:   { x: .47, y: .015, w: .215, angle: -2 },
+    amekaji:  { x: .50, y: .005, w: .170, angle:  1 },
+    trad:     { x: .50, y: .010, w: .180, angle:  1 },
+    mode:     { x: .47, y: .010, w: .185, angle: -4 },
+    minimal:  { x: .48, y: .008, w: .185, angle:  0 },
+    military: { x: .52, y: .010, w: .180, angle:  2 },
+    y2k:      { x: .49, y: .010, w: .180, angle:  1 },
+    vintage:  { x: .50, y: .010, w: .180, angle:  0 }
+  };
+
   const imageCache = new Map();
   const foregroundCache = new Map();
+  const accessoryCache = new Map();
   let activeMask = null;
 
   function maskPolygons(styleId, slot, definitions) {
@@ -270,7 +286,13 @@
           }
         }
       }
-      slots[slot] = { data, expanded, core, allowGrow };
+      slots[slot] = {
+        data,
+        expanded,
+        core,
+        allowGrow,
+        trustHard: styleId === 'casual'
+      };
     }
 
     activeMask = { key, slots };
@@ -504,7 +526,7 @@
       const y = Math.floor(i / 4 / W);
       const x = (i / 4) % W;
       const p = i / 4;
-      if (!mask.core[p]) {
+      if (!mask.core[p] && !mask.trustHard) {
         if (!silhouette[p]) continue;
         alpha *= foregroundAmount(r, g, b, background, x, y);
       }
@@ -523,7 +545,53 @@
     }
   }
 
-  async function render(canvas, styleId, colors) {
+  async function tintedAccessory(type, hex) {
+    const key = `${type}:${hex}`;
+    if (accessoryCache.has(key)) return accessoryCache.get(key);
+
+    const asset = type === 'beanie' ? 'hat-beanie' : 'hat-cap';
+    const image = await loadImage(`assets/accessories/${asset}.png`);
+    const layer = document.createElement('canvas');
+    layer.width = image.naturalWidth;
+    layer.height = image.naturalHeight;
+    const context = layer.getContext('2d', { willReadFrequently: true });
+    context.drawImage(image, 0, 0);
+
+    const frame = context.getImageData(0, 0, layer.width, layer.height);
+    const [h, s, targetL] = rgbToHsl(parseHex(hex));
+    for (let i = 0; i < frame.data.length; i += 4) {
+      if (frame.data[i + 3] === 0) continue;
+      const originalL = (
+        Math.max(frame.data[i], frame.data[i + 1], frame.data[i + 2]) +
+        Math.min(frame.data[i], frame.data[i + 1], frame.data[i + 2])
+      ) / 510;
+      const nextL = Math.max(.04, Math.min(.94, targetL + (originalL - .52) * .72));
+      const [r, g, b] = hslToRgb(h, targetL < .10 ? s * .45 : s, nextL);
+      frame.data[i] = r;
+      frame.data[i + 1] = g;
+      frame.data[i + 2] = b;
+    }
+    context.putImageData(frame, 0, 0);
+    accessoryCache.set(key, layer);
+    return layer;
+  }
+
+  async function drawHat(ctx, styleId, type, hex) {
+    const placement = HAT_PLACEMENT[styleId];
+    if (!placement || !hex) return;
+    const layer = await tintedAccessory(type, hex);
+    const size = placement.w * W;
+    const centerX = placement.x * W;
+    const centerY = placement.y * H + size / 2;
+
+    ctx.save();
+    ctx.translate(centerX, centerY);
+    ctx.rotate(placement.angle * Math.PI / 180);
+    ctx.drawImage(layer, -size / 2, -size / 2, size, size);
+    ctx.restore();
+  }
+
+  async function render(canvas, styleId, colors, options = {}) {
     if (!canvas || !MASKS[styleId]) return false;
     const src = `assets/styles/${encodeURIComponent(styleId)}.jpg`;
     const img = await loadImage(src);
@@ -546,15 +614,24 @@
     };
 
     // 内側から外側へ。重なる箇所では最後に描いた服が上になります。
-    recolor(image.data, masks.bottom, colors.bottom, false, background, centers.bottom, silhouette);
+    const casualSkinGuard = styleId === 'casual';
+    recolor(image.data, masks.bottom, colors.bottom, casualSkinGuard, background, centers.bottom, silhouette);
     recolor(image.data, masks.top, colors.top, true, background, centers.top, silhouette);
-    recolor(image.data, masks.shoes, colors.shoe, false, background, centers.shoes, silhouette);
+    recolor(image.data, masks.shoes, colors.shoe, casualSkinGuard, background, centers.shoes, silhouette);
     recolor(image.data, masks.outer, colors.outer, true, background, centers.outer, silhouette);
     recolor(image.data, masks.hat, colors.hat, true, background, centers.hat, silhouette);
 
     ctx.putImageData(image, 0, 0);
+    if (options.overlayHat) {
+      await drawHat(ctx, styleId, options.hatType || 'cap', colors.hat);
+    }
     return true;
   }
 
-  globalThis.RealLook = { render, has: id => Boolean(MASKS[id]) };
+  globalThis.RealLook = {
+    render,
+    has: id => Boolean(MASKS[id]),
+    hasOriginalHat: id => Boolean(MASKS[id]?.hat),
+    canOverlayHat: id => Boolean(HAT_PLACEMENT[id])
+  };
 })();

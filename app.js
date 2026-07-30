@@ -533,10 +533,16 @@ let figureRenderToken = 0;
 
 function renderLabFigure(sh, look, label) {
   const host = $('#figure');
+  const originalHat = globalThis.RealLook?.hasOriginalHat(shapeId);
+  const overlayHat = hatOn && !originalHat &&
+    globalThis.RealLook?.canOverlayHat(shapeId);
+  const hatCompatible = hatOn
+    ? originalHat || overlayHat
+    : !originalHat;
   const real = shapeId !== 'base' &&
     globalThis.RealLook?.has(shapeId) &&
     outerOn === (sh.outer !== 'none') &&
-    hatOn === (sh.hat !== 'none');
+    hatCompatible;
 
   if (!host.querySelector('.real-look')) {
     host.innerHTML = `
@@ -565,7 +571,10 @@ function renderLabFigure(sh, look, label) {
   mode.textContent = 'LIVE COLOR';
   $('#figure-cap').textContent = '写真の陰影を残したまま再着色';
   host.classList.add('is-loading');
-  RealLook.render(canvas, shapeId, look.colors)
+  RealLook.render(canvas, shapeId, look.colors, {
+    overlayHat,
+    hatType: look.hat
+  })
     .then(ok => {
       if (token !== figureRenderToken) return;
       host.classList.remove('is-loading');
