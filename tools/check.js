@@ -15,7 +15,7 @@ const src = [
   read('data-colors.js'),
   read('data-styles.js'),
   'globalThis.__out = { SWATCHES, SWATCH_GROUPS, STYLES, PRINCIPLES, RECIPES, TERMS,' +
-  ' TOPS, OUTERS, BOTTOMS, SHOES, garmentSVG };',
+  ' TOPS, OUTERS, BOTTOMS, SHOES, HATS, garmentSVG };',
 ].join('\n;\n');
 
 const ctx = { globalThis: null, console };
@@ -24,7 +24,7 @@ vm.createContext(ctx);
 vm.runInContext(src, ctx, { filename: 'data' });
 
 const { SWATCHES, SWATCH_GROUPS, STYLES, PRINCIPLES, RECIPES, TERMS,
-        TOPS, OUTERS, BOTTOMS, SHOES, garmentSVG } = ctx.__out;
+        TOPS, OUTERS, BOTTOMS, SHOES, HATS, garmentSVG } = ctx.__out;
 
 const fails = [];
 const ok = (cond, msg) => { if (!cond) fails.push(msg); };
@@ -117,7 +117,35 @@ for (const s of STYLES) {
 }
 
 // 座標系。中心線が 100 でないと、体と服の型紙が合いません。
-ok(/viewBox="0 0 200 300"/.test(read('garment.js')), 'garment.js: viewBox が 200x300 ではありません');
+// y の下限が負なのは、帽子と頭を原点より上に足したためです。既存の型紙は
+// 1 つも動かしていないので、ここを 0 に戻すと頭が切れます。
+ok(/const VIEW_BOX = '0 -46 200 346'/.test(read('garment.js')),
+   'garment.js: VIEW_BOX が変わっています。頭と帽子が切れないか確かめてください');
+
+// 帽子の型紙。冠と鍔（または折り返し）で 2 枚あるはずです。
+for (const [name, paths] of Object.entries(HATS)) {
+  if (name === 'none') continue;
+  ok(paths.length >= 1, `HATS.${name}: 型紙が空です`);
+  // 帽子は頭の上、つまり y が負の領域にしか出てきてはいけません。
+  for (const d of paths) {
+    const n = d.match(/-?\d+(?:\.\d+)?/g).map(Number);
+    const ys = n.filter((_, i) => i % 2 === 1);
+    ok(Math.max(...ys) <= 0, `HATS.${name}: y が正の領域（顔より下）に出ています`);
+  }
+}
+
+// 帽子を指す系統は、帽子の色も持っていなければ描けません。
+for (const s of STYLES) {
+  if (!s.look) continue;
+  const hat = s.look.hat || 'none';
+  ok(hat in HATS, `${s.id}: 未知の帽子 "${hat}"`);
+  if (hat !== 'none') {
+    ok(/^#[0-9a-f]{6}$/i.test(s.look.colors.hat || ''),
+       `${s.id}: look.colors.hat が不正 (${s.look.colors.hat})`);
+  } else {
+    ok(!s.look.colors.hat, `${s.id}: 帽子は none なのに colors.hat が書かれています`);
+  }
+}
 
 // 羽織りは前開きでなければいけません。一枚の板にすると、上より大きい分だけ
 // 中の服を覆い隠し、3色のうち1色が絵から消えます。

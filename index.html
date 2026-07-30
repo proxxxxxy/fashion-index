@@ -21,12 +21,16 @@
      どちらも縦線が太く横線が細いので、同じ活字に見えます。
      ゴシックは見出しではなくラベルと本文の実務だけに使います。 -->
 <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Zen+Old+Mincho:wght@400;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
 <div class="paper" aria-hidden="true"></div>
 <div class="grain" aria-hidden="true"></div>
+
+<!-- トンボ。断ち位置を示す印刷物の痕跡です。飾りではなく、
+     この紙が「切り出された一部」であることの符号として置いています。 -->
+<div class="crops" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
 
 <!-- 70 : 25 : 5。この索引の背骨をそのまま進捗計にしています。
      読み進めるほど、面積の大きい色から順に満ちます。 -->
@@ -100,7 +104,7 @@
 </header>
 
 <!-- ───────── 系統 ───────── -->
-<section class="sec" id="styles" data-lazy>
+<section class="sec" id="styles" data-lazy data-num="I" data-label="系統">
   <div class="sec-head">
     <p class="sec-num">Ⅰ</p>
     <h2>系統<em>12</em></h2>
@@ -113,7 +117,7 @@
 </section>
 
 <!-- ───────── 原則 ───────── -->
-<section class="sec sec-dark" id="principles" data-lazy>
+<section class="sec sec-dark" id="principles" data-lazy data-num="II" data-label="配色の原則">
   <div class="sec-head">
     <p class="sec-num">Ⅱ</p>
     <h2>配色の<em>原則</em></h2>
@@ -125,7 +129,7 @@
 </section>
 
 <!-- ───────── 配色 ───────── -->
-<section class="sec" id="recipes" data-lazy>
+<section class="sec" id="recipes" data-lazy data-num="III" data-label="着られる三色">
   <div class="sec-head">
     <p class="sec-num">Ⅲ</p>
     <h2>着られる<em>3色</em></h2>
@@ -138,12 +142,13 @@
 </section>
 
 <!-- ───────── 試す ───────── -->
-<section class="sec sec-lab" id="lab" data-lazy>
+<section class="sec sec-lab" id="lab" data-lazy data-num="IV" data-label="配色を試す">
   <div class="sec-head">
     <p class="sec-num">Ⅳ</p>
     <h2>配色を<em>試す</em></h2>
     <p class="sec-lead">
-      上・下・足元に色を置くと、この索引の原則に照らして診断します。
+      帽子・上・下・足元に色を置くと、この索引の原則に照らして診断します。
+      帽子は顔から最も近い部位なので、かぶるかどうかで判定そのものが変わります。
       点数を上げるゲームではありません。なぜ揃わないのかを言葉にするための道具です。
     </p>
   </div>
@@ -153,11 +158,22 @@
       <!-- 着装図は garment.js が描きます。体を先に置いて服を重ねる方式なので、
            ここに空の器だけ用意します。 -->
       <div class="figure" id="figure"></div>
-      <p class="figure-cap">上・下・足元の面積の目安</p>
+      <p class="figure-cap">面積の目安</p>
       <div class="lab-ratio" id="lab-ratio" aria-hidden="true"></div>
     </div>
 
     <div class="lab-controls">
+      <div class="slot slot-hat" data-slot="hat">
+        <p class="slot-label">
+          <b>帽子</b><span id="name-hat">—</span>
+          <!-- 帽子は顔から最も近い位置なので、有無で診断そのものが変わります。 -->
+          <button type="button" class="toggle" id="btn-hat" aria-pressed="false">
+            <span class="toggle-track"><span class="toggle-knob"></span></span>
+            <span class="toggle-text">かぶる</span>
+          </button>
+        </p>
+        <div class="swatches" id="sw-hat"></div>
+      </div>
       <div class="slot" data-slot="top">
         <p class="slot-label"><b>上</b><span id="name-top">—</span></p>
         <div class="swatches" id="sw-top"></div>
@@ -181,7 +197,7 @@
 </section>
 
 <!-- ───────── 用語 ───────── -->
-<section class="sec sec-terms" id="terms" data-lazy>
+<section class="sec sec-terms" id="terms" data-lazy data-num="V" data-label="用語">
   <div class="sec-head">
     <p class="sec-num">Ⅴ</p>
     <h2>用語</h2>
@@ -208,9 +224,9 @@
 
 <div class="toast" id="toast" aria-live="polite"></div>
 
-<script src="garment.js?v=4"></script>
-<script src="data-colors.js?v=4"></script>
-<script src="data-styles.js?v=4"></script>
-<script src="app.js?v=4"></script>
+<script src="garment.js?v=6"></script>
+<script src="data-colors.js?v=6"></script>
+<script src="data-styles.js?v=6"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>

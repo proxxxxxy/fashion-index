@@ -215,10 +215,16 @@ function renderTerms() {
 
 /* ── 配色を試す ─────────────────────────────── */
 
-const pick = { top: 'white', bottom: 'navy', shoes: 'brown' };
+/* 帽子は既定でかぶりません。かぶらない状態が最も外れないからです。
+   hatOn を false のまま色だけ選べるようにしてあるので、
+   ON にした瞬間の変化が見えます。 */
+const pick = { top: 'white', bottom: 'navy', shoes: 'brown', hat: 'navy' };
+let hatOn = false;
+
+const SLOTS = ['hat', 'top', 'bottom', 'shoes'];
 
 function renderSwatchPickers() {
-  for (const slot of ['top', 'bottom', 'shoes']) {
+  for (const slot of SLOTS) {
     // 23 個を平らに並べると、どれが土台でどれが差し色か伝わりません。
     // 群ごとに小さな見出しを付けて、上から読める順にします。
     $('#sw-' + slot).innerHTML = SWATCH_GROUPS.map(g => `
@@ -248,32 +254,46 @@ const LAB_LOOK = { top: 'shirt', outer: 'none', bottom: 'slim', shoe: 'low' };
 
 function syncLab() {
   const t = swatch(pick.top), b = swatch(pick.bottom), s = swatch(pick.shoes);
+  const h = hatOn ? swatch(pick.hat) : null;
+
+  const colors = { top: t.hex, bottom: b.hex, shoe: s.hex };
+  if (h) colors.hat = h.hex;
 
   // 着装図は描き直します。体の上に服を重ねる順は garment.js が持っています。
   $('#figure').innerHTML = garmentSVG(
-    { ...LAB_LOOK, colors: { top: t.hex, bottom: b.hex, shoe: s.hex } },
-    { label: `上が${t.name}、下が${b.name}、足元が${s.name}の着装図` }
+    { ...LAB_LOOK, hat: hatOn ? 'cap' : 'none', colors },
+    { label: (h ? `帽子が${h.name}、` : '') +
+             `上が${t.name}、下が${b.name}、足元が${s.name}の着装図` }
   );
 
+  // 面積の目安。帽子は小さいので、5 の側に足します。
   $('#lab-ratio').innerHTML =
-    `<span style="background:${t.hex}"></span><span style="background:${b.hex}"></span><span style="background:${s.hex}"></span>`;
+    `<span style="background:${t.hex}"></span><span style="background:${b.hex}"></span>` +
+    `<span style="background:${s.hex}"></span>` +
+    (h ? `<span class="ratio-hat" style="background:${h.hex}"></span>` : '');
 
-  for (const [slot, c] of [['top', t], ['bottom', b], ['shoes', s]]) {
-    $('#name-' + slot).textContent = c.name;
+  const shown = [['top', t], ['bottom', b], ['shoes', s], ['hat', swatch(pick.hat)]];
+  for (const [slot, c] of shown) {
+    $('#name-' + slot).textContent =
+      (slot === 'hat' && !hatOn) ? 'かぶらない' : c.name;
     $$('#sw-' + slot + ' .sw').forEach(el =>
       el.setAttribute('aria-pressed', String(el.dataset.color === pick[slot])));
   }
 
-  renderVerdict(t, b, s);
+  $('#btn-hat').setAttribute('aria-pressed', String(hatOn));
+  $('.slot-hat').classList.toggle('is-off', !hatOn);
+
+  renderVerdict(t, b, s, h);
 }
 
 /* この索引の原則を、そのまま判定に落としたもの。
    点を競うためではなく、なぜ揃わないのかを言葉にするために書いています。 */
-function judge(t, b, s) {
+function judge(t, b, s, h = null) {
   const notes = [];
   const add = (kind, mark, text) => notes.push({ kind, mark, text });
 
-  const all = [t, b, s];
+  // 帽子はかぶっているときだけ数に入れます。
+  const all = h ? [t, b, s, h] : [t, b, s];
   const chromatic = all.filter(c => !c.neutral);
   const uniqueChromatic = [...new Set(chromatic.map(c => c.id))];
 
@@ -304,6 +324,10 @@ function judge(t, b, s) {
   // 「強い色」は明るさでは決まりません。ボルドーもパープルも色としては強いのに、
   // 暗いので胸元にあっても騒ぎません。vivid（手で付けた強さ）と明るさの両方を見ます。
   const loud = c => c.vivid && c.lightness > 35;
+  // 帽子は顔から最も近い位置です。強い色をここに置くのが最も外れます。
+  if (h && loud(h)) {
+    add('bad', '05', `${h.name}の帽子。顔から最も近い場所に最も強い色があるので、視線が顔まで届きません。帽子は無彩色か、暗い色にしてください。`);
+  }
   if (loud(t) && !loud(s)) {
     add('bad', '05', `${t.name}が胸にあります。顔の近くの強い色は、視線をそこで止めます。足元か小物に移せるなら、そのほうが効きます。`);
   } else if (loud(s)) {
@@ -317,6 +341,22 @@ function judge(t, b, s) {
     add('bad', '06', `全身が${t.name}一色。素材で差をつけない限り、作業着か制服に見えます。どこか一か所を替えてください。`);
   } else if (t.id === s.id) {
     add('good', '06', `${t.name}が上と足元の 2 か所に。離れた 2 か所の反復は、偶然ではなく意図として読まれます。`);
+  }
+
+  // 帽子は反復の相手として最も使いやすい部位です。上下から最も離れているので。
+  if (h) {
+    if (h.id === s.id && h.id !== t.id) {
+      add('good', '06', `帽子と足元が同じ${h.name}。全身の両端で同じ色が鳴るので、間にある色が落ち着きます。`);
+    } else if (h.id === b.id && h.id !== t.id) {
+      add('good', '06', `帽子と下が同じ${h.name}。上を挟む形になって、縦のつながりが出ます。`);
+    } else if (h.id === t.id) {
+      add('bad', '06', `帽子と上が同じ${h.name}で、しかも隣り合っています。頭と胴が一続きに見えるので、どちらかを変えてください。`);
+    }
+
+    // 帽子が全身で最も明るいと、重心が頭に上がります。
+    if (h.lightness > 78 && h.lightness - Math.max(t.lightness, b.lightness, s.lightness) > 12) {
+      add('bad', '04', `帽子が全身で最も明るい。視線が頭の上で止まって、重心が浮きます。帽子は上着より暗いほうが収まります。`);
+    }
   }
 
   // 原則03 — トーン
@@ -353,14 +393,15 @@ function judge(t, b, s) {
   return { title, bad, notes };
 }
 
-function renderVerdict(t, b, s) {
-  const v = judge(t, b, s);
+function renderVerdict(t, b, s, h = null) {
+  const v = judge(t, b, s, h);
+  const line = (h ? [h.name] : []).concat([t.name, b.name, s.name]).join(' · ');
   $('#verdict').innerHTML = `
     <div class="verdict-card">
       <div class="verdict-head">
         <h3 class="verdict-title">${esc(v.title)}</h3>
         <span class="verdict-badge ${v.bad === 0 ? 'ok' : 'warn'}">${v.bad === 0 ? 'CLEAR' : v.bad + ' TO FIX'}</span>
-        <span class="verdict-badge">${esc(t.name)} · ${esc(b.name)} · ${esc(s.name)}</span>
+        <span class="verdict-badge">${esc(line)}</span>
       </div>
       <ul class="verdict-notes">
         ${v.notes.map(n => `<li class="${n.kind}" data-mark="${esc(n.mark)}">${esc(n.text)}</li>`).join('')}
@@ -368,20 +409,28 @@ function renderVerdict(t, b, s) {
     </div>`;
 }
 
+function labHash() {
+  // 帽子をかぶらないときは 3 つのまま。以前に配ったリンクをそのまま生かします。
+  const base = `${pick.top}-${pick.bottom}-${pick.shoes}`;
+  return `#/lab/${hatOn ? base + '-' + pick.hat : base}`;
+}
+
 function bindLabActions() {
+  $('#btn-hat').addEventListener('click', () => { hatOn = !hatOn; syncLab(); });
+
   $('#btn-random').addEventListener('click', () => {
     const r = () => SWATCHES[Math.floor(Math.random() * SWATCHES.length)].id;
-    pick.top = r(); pick.bottom = r(); pick.shoes = r();
+    pick.top = r(); pick.bottom = r(); pick.shoes = r(); pick.hat = r();
     syncLab();
   });
 
   $('#btn-share').addEventListener('click', async () => {
-    const url = location.origin + location.pathname + `#/lab/${pick.top}-${pick.bottom}-${pick.shoes}`;
+    const url = location.origin + location.pathname + labHash();
     try {
       await navigator.clipboard.writeText(url);
       toast('リンクをコピーしました');
     } catch {
-      location.hash = `#/lab/${pick.top}-${pick.bottom}-${pick.shoes}`;
+      location.hash = labHash();
       toast('アドレス欄のリンクを共有してください');
     }
   });
@@ -405,12 +454,15 @@ function route() {
   const style = h.match(/^#\/style\/([a-z0-9-]+)$/);
   if (style) return openSheet(style[1]);
 
-  const lab = h.match(/^#\/lab\/([a-z]+)-([a-z]+)-([a-z]+)$/);
+  // 4 つ目は帽子で、省略できます。3 つのリンクは帽子なしとして開きます。
+  const lab = h.match(/^#\/lab\/([a-z]+)-([a-z]+)-([a-z]+)(?:-([a-z]+))?$/);
   if (lab) {
     closeSheet();
-    const [, a, b, c] = lab;
-    if (swatch(a) && swatch(b) && swatch(c)) {
+    const [, a, b, c, d] = lab;
+    if (swatch(a) && swatch(b) && swatch(c) && (!d || swatch(d))) {
       pick.top = a; pick.bottom = b; pick.shoes = c;
+      hatOn = !!d;
+      if (d) pick.hat = d;
       syncLab();
       $('#lab').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }

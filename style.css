@@ -32,9 +32,18 @@
   --dark:       #17171d;
   --dark-2:     #22222b;
 
+  /* 線には太さの階層を持たせます。全部を同じ 2px で囲むと、
+     どこが構造でどこが仕切りなのか分からなくなり、既製のテンプレートに見えます。
+     細線＝仕切り、標準＝構造、太線＝いちばん外側だけ。 */
+  --rule:       rgba(20,20,26,.22);   /* 細線の色 */
+  --hair:       1px solid var(--rule);
   --edge:       2px solid var(--ink);
-  --shadow:     4px 5px 0 rgba(20,20,26,.13);
-  --shadow-lg:  8px 10px 0 rgba(20,20,26,.15);
+
+  /* 影。切った紙は真っ黒に 4px ずれた影を落としません。
+     わずかに滲んで、下に沈むだけです。持ち上げたい 2〜3 個だけに使います。 */
+  --shadow:     0 1px 2px rgba(20,20,26,.10), 0 6px 14px -6px rgba(20,20,26,.22);
+  --shadow-lg:  0 2px 4px rgba(20,20,26,.10), 0 18px 34px -14px rgba(20,20,26,.30);
+  --shadow-cut: 3px 4px 0 rgba(20,20,26,.10);  /* 貼り重ねた紙。使うのは表紙だけ */
 
   /* Bodoni はモード誌の声。日本語は明朝で受けて同じ骨格に揃えます。
      ゴシックは見出しに使わず、ラベルと本文の実務だけを担当します。 */
@@ -110,6 +119,21 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
   mix-blend-mode: multiply;
 }
 
+/* ── トンボ ─────────────────────────────────
+   断ち位置の印。画面の四隅に細い十字を置くだけですが、
+   これがあると「画面」ではなく「刷られた紙」として読まれます。 */
+
+.crops { position: fixed; inset: 0; z-index: 58; pointer-events: none; }
+.crops i {
+  position: absolute; width: 13px; height: 13px;
+  border-color: var(--rule); border-style: solid; border-width: 0;
+}
+.crops i:nth-child(1) { top: 10px;    left: 10px;  border-top-width: 1px; border-left-width: 1px; }
+.crops i:nth-child(2) { top: 10px;    right: 10px; border-top-width: 1px; border-right-width: 1px; }
+.crops i:nth-child(3) { bottom: 10px; left: 10px;  border-bottom-width: 1px; border-left-width: 1px; }
+.crops i:nth-child(4) { bottom: 10px; right: 10px; border-bottom-width: 1px; border-right-width: 1px; }
+@media (max-width: 700px) { .crops { display: none; } }
+
 /* ── 進捗計 ─────────────────────────────────
    70 : 25 : 5。この索引の背骨を、そのまま読み進み表示にしています。 */
 
@@ -131,7 +155,7 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
   padding: .55rem var(--pad);
   background: rgba(231,228,219,.88);
   backdrop-filter: blur(8px) saturate(1.1);
-  border-bottom: 2px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
 }
 .nav-mark { text-decoration: none; color: var(--ink); line-height: 1; display: grid; }
 .nav-mark b { font-family: var(--display); font-weight: 900; font-size: 1.1rem; letter-spacing: .02em; }
@@ -154,9 +178,33 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
 
 /* ── 見出しの共通 ───────────────────────────── */
 
-.sec { padding: clamp(3.5rem, 9vw, 7rem) var(--pad); position: relative; }
+.sec { padding: clamp(3.5rem, 9vw, 7rem) var(--pad); position: relative; overflow: hidden; }
 
-.sec-head { max-width: 46rem; margin: 0 auto clamp(2rem, 5vw, 3.5rem); }
+/* 章番号を紙に薄く刷ります。断ち落として画面の外へ逃がすので、
+   全体が「一枚のページ」ではなく「大きな紙の一部」に見えます。 */
+.sec::before {
+  content: attr(data-num);
+  position: absolute; top: -.18em; left: -.06em; z-index: 0;
+  font-family: var(--display); font-weight: 900; font-style: italic;
+  font-size: clamp(9rem, 26vw, 20rem); line-height: .8;
+  color: var(--ink); opacity: .045; pointer-events: none; user-select: none;
+}
+.sec-dark::before, .sec-terms::before { color: var(--paper); opacity: .07; }
+
+/* 背に章題を縦で入れます。日本語の誌面では当たり前の置き方で、
+   横組みだけで組むと、どうしても英語の雑誌の翻訳版に見えます。 */
+.sec::after {
+  content: attr(data-label);
+  position: absolute; top: clamp(3.5rem, 9vw, 7rem); right: .55rem;
+  writing-mode: vertical-rl; text-orientation: upright;
+  font-family: var(--jp-serif); font-weight: 700; font-size: .7rem;
+  letter-spacing: .3em; color: var(--ink-faint);
+  pointer-events: none; user-select: none;
+}
+.sec-dark::after, .sec-terms::after { color: #6f6b62; }
+@media (max-width: 900px) { .sec::after { display: none; } }
+
+.sec-head { max-width: 46rem; margin: 0 auto clamp(2rem, 5vw, 3.5rem); position: relative; z-index: 1; }
 .sec-num {
   font-family: var(--display); font-size: .8rem; letter-spacing: .5em;
   color: var(--riso-pink); margin: 0 0 .4rem;
@@ -227,7 +275,7 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
 .hero h1 .w6 { -webkit-text-stroke: 2px var(--ink); color: transparent; }
 
 .cut-lede {
-  background: var(--paper-hi); border: var(--edge); box-shadow: var(--shadow);
+  background: var(--paper-hi); border: var(--edge); box-shadow: var(--shadow-cut);
   padding: 1.1rem 1.3rem;
   font-family: var(--jp-serif); font-size: .95rem; line-height: 2.05;
 }
@@ -235,7 +283,7 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
 
 .cut-rule {
   background: var(--ink); color: var(--paper);
-  padding: 1.1rem 1.2rem; box-shadow: var(--shadow-lg);
+  padding: 1.1rem 1.2rem; box-shadow: var(--shadow-cut);
   display: grid; align-content: center;
 }
 .rule-num {
@@ -245,7 +293,7 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
 }
 .rule-cap { margin: .5rem 0 0; font-size: .74rem; line-height: 1.7; color: #a8a49b; }
 
-.cut-strip { display: flex; height: 3.4rem; border: var(--edge); box-shadow: var(--shadow); }
+.cut-strip { display: flex; height: 3.4rem; border: var(--edge); box-shadow: var(--shadow-cut); }
 .cut-strip span { flex: 1; }
 
 .cut-stamp {
@@ -284,36 +332,48 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
 
 /* ── 系統のカード ───────────────────────────── */
 
+/* 同じ大きさのカードが等間隔で12枚並ぶと、中身より先に「一覧」に見えます。
+   最初の一枚だけ 2 列取って見出しにし、以降は 1 列。誌面の入り方に寄せます。
+   段はわざと揃えず、行ごとに少しずらします。 */
 .style-grid {
-  max-width: 66rem; margin: 0 auto;
-  display: grid; gap: clamp(.9rem, 2.2vw, 1.5rem);
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  max-width: 66rem; margin: 0 auto; position: relative; z-index: 1;
+  display: grid; gap: clamp(1rem, 2.4vw, 1.7rem);
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+}
+@media (min-width: 760px) {
+  .style-card:first-child { grid-column: span 2; }
+  .style-card:first-child .card-figure .garment { max-width: 11rem; }
+  .style-card:first-child .card-name { font-size: 2.1rem; }
+  .style-card:first-child .card-one { font-size: .9rem; }
+  /* 偶数番のカードをわずかに沈めて、横一線に揃わないようにします。 */
+  .style-card:nth-child(even) { margin-top: 1.4rem; }
 }
 
 .style-card {
   position: relative; text-align: left; cursor: pointer;
-  background: var(--paper-hi); border: var(--edge); box-shadow: var(--shadow);
+  background: var(--paper-hi); border: var(--hair); box-shadow: none;
   padding: 0; overflow: hidden; color: inherit; font: inherit;
   transform: rotate(var(--rot, 0deg));
   transition: transform var(--t-move) var(--ease-out),
-              box-shadow  var(--t-move) var(--ease-out);
+              box-shadow  var(--t-move) var(--ease-out),
+              border-color var(--t-move) var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
-  .style-card:hover { transform: rotate(0deg) translate(-2px, -3px); box-shadow: var(--shadow-lg); }
+  .style-card:hover { transform: rotate(0deg) translateY(-3px); box-shadow: var(--shadow); border-color: var(--ink); }
 }
-.style-card:focus-visible { transform: rotate(0deg) translate(-2px, -3px); box-shadow: var(--shadow-lg); }
+.style-card:focus-visible { transform: rotate(0deg) translateY(-3px); box-shadow: var(--shadow); border-color: var(--ink); }
 /* 押した手応え。100〜160ms がちょうどよく、これ以上長いと鈍く感じます。 */
 .style-card:active { transform: rotate(0deg) scale(.97); transition-duration: var(--t-press); }
 
 /* 着装図をカードの頭に。下に配色の帯を敷いて、図と色を同時に読ませます。 */
 .card-figure {
   display: block; background: var(--paper);
-  border-bottom: 2px solid var(--ink);
+  border-bottom: var(--hair);
   padding: .5rem 0 0;
 }
 .card-figure .garment { max-width: 8.4rem; margin: 0 auto; }
 
-.card-band { display: flex; height: 1.5rem; border-bottom: 2px solid var(--ink); }
+.card-band { display: flex; height: 1.5rem; }
 .card-band span { flex: 1; }
 .card-band span:nth-child(1) { flex: 3; }
 .card-band span:nth-child(2) { flex: 2; }
@@ -334,7 +394,7 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
 }
 .card-era {
   position: absolute; top: .5rem; right: .5rem;
-  background: var(--paper); border: 2px solid var(--ink);
+  background: var(--paper); border: var(--hair);
   font-family: var(--display); font-size: .56rem; letter-spacing: .08em;
   padding: .15em .5em;
 }
@@ -364,7 +424,7 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
 .principle {
   display: grid; grid-template-columns: auto 1fr; gap: 0 1.2rem;
   padding: 1.3rem 1.4rem;
-  background: var(--dark-2); border: 2px solid #3d3c48;
+  background: var(--dark-2); border: 0; border-left: 3px solid var(--riso-yellow);
   transform: rotate(var(--rot, 0deg));
 }
 .p-num {
@@ -420,23 +480,25 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
 .chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
 .chip:active { transform: scale(.97); }
 
+/* 配色は一覧で見るものなので、こちらは意図して均等に組みます。
+   カードは枠を持たず、色面そのものが境界になります。 */
 .recipe-grid {
-  max-width: 66rem; margin: 0 auto;
+  max-width: 66rem; margin: 0 auto; position: relative; z-index: 1;
   display: grid; gap: clamp(.8rem, 2vw, 1.3rem);
   grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
 }
 
 .recipe {
-  background: var(--paper-hi); border: var(--edge); box-shadow: var(--shadow);
+  background: transparent; border: 0; box-shadow: none;
   overflow: hidden; transform: rotate(var(--rot, 0deg));
   transition: transform var(--t-move) var(--ease-out), box-shadow var(--t-move) var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
-  .recipe:hover { transform: rotate(0) translate(-2px,-2px); box-shadow: var(--shadow-lg); }
+  .recipe:hover { transform: rotate(0) translateY(-3px); }
 }
 .recipe.is-hidden { display: none; }
 
-.recipe-colors { display: flex; height: 5.2rem; border-bottom: 2px solid var(--ink); }
+.recipe-colors { display: flex; height: 5.6rem; }
 .recipe-colors span { position: relative; }
 .recipe-colors span:nth-child(1) { flex: 70; }
 .recipe-colors span:nth-child(2) { flex: 25; }
@@ -447,13 +509,16 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
   color: rgba(255,255,255,.7); mix-blend-mode: difference;
 }
 
-.recipe-body { padding: .7rem .85rem .95rem; }
-.recipe-name { margin: 0 0 .3rem; font-family: var(--jp-serif); font-weight: 700; font-size: 1.02rem; }
+.recipe-body { padding: .6rem 0 .2rem; }
+.recipe-name {
+  margin: 0 0 .3rem; font-family: var(--jp-serif); font-weight: 700; font-size: 1.02rem;
+  padding-bottom: .3rem; border-bottom: var(--hair);
+}
 .recipe-note { margin: 0; font-size: .76rem; line-height: 1.85; color: var(--ink-soft); }
 
 /* ── 配色を試す ─────────────────────────────── */
 
-.sec-lab { background: var(--paper-2); border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); }
+.sec-lab { background: var(--paper-2); border-top: var(--hair); border-bottom: var(--hair); }
 
 .lab {
   max-width: 62rem; margin: 0 auto;
@@ -489,13 +554,43 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
   font-family: var(--jp-serif); font-size: .68rem; color: var(--ink-faint);
 }
 
-.lab-ratio { display: flex; height: 1.5rem; margin-top: .35rem; border: var(--edge); }
+.lab-ratio { display: flex; height: 1.1rem; margin-top: .35rem; }
 .lab-ratio span { transition: background-color var(--t-move) var(--ease-out); }
 .lab-ratio span:nth-child(1) { flex: 45; }
 .lab-ratio span:nth-child(2) { flex: 45; }
 .lab-ratio span:nth-child(3) { flex: 10; }
 
 .slot { margin-bottom: 1.1rem; }
+
+/* 帽子だけは有無から決めるので、切り替えを見出しの中に置きます。 */
+.slot-hat { padding-bottom: .9rem; border-bottom: 1px solid var(--rule); }
+.slot-hat.is-off .swatches { opacity: .38; }
+.slot-hat.is-off .sw { cursor: pointer; }
+
+.toggle {
+  margin-left: auto; display: inline-flex; align-items: center; gap: .45rem;
+  font: inherit; font-family: var(--jp-serif); font-size: .74rem; font-weight: 700;
+  background: none; border: 0; cursor: pointer; color: var(--ink-faint);
+  /* 指で押す的なので、見た目の高さではなく当たり判定を 44px 側に寄せます。 */
+  padding: .62rem 0; margin-top: -.62rem; margin-bottom: -.62rem;
+}
+.toggle-track {
+  width: 2.3rem; height: 1.15rem; border: 1.5px solid var(--ink);
+  background: var(--paper); display: block; position: relative;
+  transition: background-color var(--t-hover) var(--ease-out);
+}
+.toggle-knob {
+  position: absolute; inset: 1.5px auto 1.5px 1.5px; width: .95rem;
+  background: var(--ink);
+  transition: transform var(--t-hover) var(--ease-out);
+}
+.toggle[aria-pressed="true"] { color: var(--ink); }
+.toggle[aria-pressed="true"] .toggle-track { background: var(--riso-yellow); }
+.toggle[aria-pressed="true"] .toggle-knob { transform: translateX(1.15rem); }
+.toggle:active .toggle-track { transform: scale(.96); }
+
+/* 帽子は面積が小さいので、目安の帯でも細く出します。 */
+.ratio-hat { flex: 6; }
 .slot-label {
   display: flex; align-items: baseline; gap: .6rem; margin: 0 0 .45rem;
   font-family: var(--jp-serif);
@@ -535,8 +630,8 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
 .btn-ghost { background: transparent; color: var(--ink); }
 
 .verdict-card {
-  margin-top: 1.4rem; background: var(--paper-hi); border: var(--edge); box-shadow: var(--shadow-lg);
-  padding: 1.2rem 1.3rem;
+  margin-top: 1.4rem; background: var(--paper-hi); border: 0; border-top: 3px solid var(--ink);
+  box-shadow: var(--shadow); padding: 1.2rem 1.3rem;
 }
 .verdict-head { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; margin: 0 0 .8rem; }
 .verdict-title { margin: 0; font-family: var(--display); font-weight: 900; font-size: clamp(1.5rem, 5vw, 2.2rem); line-height: 1; letter-spacing: -.02em; }
@@ -576,7 +671,7 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
 
 /* ── 脚注 ───────────────────────────────────── */
 
-.foot { padding: clamp(2.5rem, 6vw, 4rem) var(--pad); text-align: center; border-top: 2px solid var(--ink); }
+.foot { padding: clamp(2.5rem, 6vw, 4rem) var(--pad); text-align: center; border-top: var(--hair); }
 .foot p { margin: 0 auto .5rem; max-width: 34rem; font-size: .79rem; line-height: 1.9; color: var(--ink-soft); }
 .foot-mark { font-family: var(--display); font-weight: 900; font-size: 1.5rem !important; letter-spacing: .06em; color: var(--ink) !important; }
 .foot-small { font-size: .71rem !important; color: var(--ink-faint) !important; }
@@ -622,11 +717,11 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
 
 .sheet h3 { margin: 0 0 .1rem; font-family: var(--jp-serif); font-weight: 900; font-size: clamp(2rem, 8vw, 3.2rem); line-height: 1.05; letter-spacing: -.02em; }
 .sheet .s-en { margin: 0 0 1rem; font-family: var(--display); font-style: italic; font-size: .7rem; letter-spacing: .2em; color: var(--ink-faint); }
-.sheet .s-band { display: flex; height: 3.2rem; border: var(--edge); margin-bottom: 1.2rem; }
+.sheet .s-band { display: flex; height: 3.2rem; margin-bottom: 1.2rem; }
 .sheet .s-band span { flex: 1; }
 /* 詳細では、着装図を本文の横に置きます。細い画面では上に回します。 */
 .s-lead { display: grid; grid-template-columns: 9rem 1fr; gap: 1.2rem; margin-bottom: 1.4rem; align-items: start; }
-.s-figure { border: var(--edge); background: var(--paper-hi); padding: .5rem .3rem 0; }
+.s-figure { border: var(--hair); background: var(--paper-hi); padding: .5rem .3rem 0; }
 .sheet .s-body { font-family: var(--jp-serif); font-size: .95rem; line-height: 2.1; margin: 0; max-width: 34em; }
 @media (max-width: 560px) {
   .s-lead { grid-template-columns: 1fr; }

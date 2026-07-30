@@ -143,8 +143,8 @@ const STYLES = [
     pitfall: "上下ともダボつかせると体の位置が分からなくなり、ただ大きい服になります。パンツを細くするか丈を詰めて、足首を出してください。",
     adjacent: ["y2k", "gorpcore", "work"],
     // 黒で挟んでグレーを中に。上が大きく下が細い Y ではなく、太さを下に置きます。
-    look: { top: "hoodie", outer: "jacket", bottom: "wide", shoe: "low",
-            colors: { top: "#8c8f94", outer: "#1f1f24", bottom: "#2a2a30", shoe: "#eae5da" } }
+    look: { top: "hoodie", outer: "jacket", bottom: "wide", shoe: "low", hat: "cap",
+            colors: { top: "#8c8f94", outer: "#1f1f24", bottom: "#2a2a30", shoe: "#eae5da", hat: "#1f1f24" } }
   },
   {
     id: "mode",
@@ -260,8 +260,8 @@ const STYLES = [
     pitfall: "金具の色が銀と真鍮で混ざると途端に素人臭くなります。ボタン、リベット、ベルトの尾錠を全部真鍮か全部銀に揃えるだけで、見え方が締まります。",
     adjacent: ["amekaji", "military", "vintage"],
     // 未晒しのダックにシャンブレー。金具の色を混ぜないことが、この系統の生命線です。
-    look: { top: "shirt", outer: "jacket", bottom: "wide", shoe: "boot",
-            colors: { top: "#7f9dc0", outer: "#a58a5e", bottom: "#5c4433", shoe: "#3d2e22" } }
+    look: { top: "shirt", outer: "jacket", bottom: "wide", shoe: "boot", hat: "cap",
+            colors: { top: "#7f9dc0", outer: "#a58a5e", bottom: "#5c4433", shoe: "#3d2e22", hat: "#5c4433" } }
   },
   {
     id: "gorpcore",
@@ -290,8 +290,8 @@ const STYLES = [
     pitfall: "機能物を三点以上重ねると本気の登山客になります。シェルかフリースのどちらか一つに絞り、残りは綿の無地とスラックスにして街へ引き戻してください。",
     adjacent: ["military", "street", "minimal"],
     // 山の道具の配色をそのまま街へ。橙は足元の一点だけに絞ります。
-    look: { top: "knit", outer: "shell", bottom: "cargo", shoe: "low",
-            colors: { top: "#8c8f94", outer: "#2f5d4a", bottom: "#2a2a30", shoe: "#d1682f" } }
+    look: { top: "knit", outer: "shell", bottom: "cargo", shoe: "low", hat: "beanie",
+            colors: { top: "#8c8f94", outer: "#2f5d4a", bottom: "#2a2a30", shoe: "#d1682f", hat: "#3a3d42" } }
   },
   {
     id: "y2k",

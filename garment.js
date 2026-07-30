@@ -7,18 +7,44 @@
    最後の影は multiply で刷り重ねる 1 枚で、これがあると
    同じ色でも布が立ちます。
 
-   座標系は 200 × 300、体の中心線は x = 100 で固定です。
-   ここを動かすと全ての型紙が合わなくなります。
+   体の中心線は x = 100 で固定。ここを動かすと全ての型紙が合わなくなります。
+
+   viewBox は "0 -46 200 346" です。帽子を足すとき、頭を描く場所が要りました。
+   高さを 300 のまま上へ伸ばすと既存の型紙が全部ずれるので、**原点より上に
+   46 だけ場所を足す**形にしています。既存の座標（y=30〜278）は 1 つも
+   動いていません。y が負の領域が頭と帽子です。
    ============================================================ */
 
 'use strict';
 
-/* 体。服を脱がせても残る部分です。首と前腕だけ見えます。 */
+const VIEW_BOX = '0 -46 200 346';
+
+/* 体。服を脱がせても残る部分です。頭・首・前腕だけ見えます。
+   顔は描きません。必要なのは帽子が乗る面と、面積の比だけです。 */
 const BODY = [
+  'M100,-42 C115,-42 125,-31 125,-14 C125,6 116,28 100,32 C84,28 75,6 75,-14 C75,-31 85,-42 100,-42 Z', // 頭
   'M88,30 H112 V58 H88 Z',                    // 首
   'M40,104 L58,100 L62,158 L48,162 Z',        // 左前腕
   'M160,104 L142,100 L138,158 L152,162 Z',    // 右前腕
 ];
+
+/* 帽子。最後に描きます。フードより手前に来ないと、被っているように見えません。
+   鍔は右へ出します。正面を向けると顔の面積を潰してしまうためです。 */
+const HATS = {
+  none: [],
+
+  // キャップ。冠と鍔の2枚。
+  cap: [
+    'M74,-18 C74,-42 86,-52 100,-52 C114,-52 126,-42 126,-18 Z',
+    'M112,-22 C134,-22 152,-18 154,-11 C150,-6 138,-9 126,-13 L112,-15 Z',
+  ],
+
+  // ニット帽。折り返しの分だけ、額が隠れます。
+  beanie: [
+    'M76,-16 C76,-44 88,-54 100,-54 C112,-54 124,-44 124,-16 Z',
+    'M74,-18 H126 V-4 H74 Z',
+  ],
+};
 
 /* 上。袖の丈と身幅で系統が決まります。
    丈が長いものほど下に回り込むので、描く順は変えないでください。 */
@@ -115,8 +141,9 @@ let gradSeq = 0;
 
 /**
  * 服の絵を SVG 文字列で返します。
- * look = { top, outer, bottom, shoe, colors: { top, outer, bottom, shoe } }
- * colors は 16 進。outer が 'none' のとき colors.outer は読みません。
+ * look = { top, outer, bottom, shoe, hat, colors: { top, outer, bottom, shoe, hat } }
+ * colors は 16 進。'none' を指した部位の色は読みません。
+ * hat は省略できます（省略時は被りません）。
  */
 function garmentSVG(look, opts = {}) {
   const gid = 'gsh' + (++gradSeq);
@@ -126,6 +153,7 @@ function garmentSVG(look, opts = {}) {
   const outers  = OUTERS[look.outer]   || OUTERS.none;
   const bottoms = BOTTOMS[look.bottom] || BOTTOMS.slim;
   const shoes   = SHOES[look.shoe]     || SHOES.low;
+  const hats    = HATS[look.hat || 'none'] || HATS.none;
 
   const paint = (paths, fill) =>
     paths.map(d => `<path d="${d}" fill="${fill}" stroke="#14141a" stroke-width="2.4" stroke-linejoin="round"/>`).join('');
@@ -134,10 +162,10 @@ function garmentSVG(look, opts = {}) {
   const shade = (paths) =>
     paths.map(d => `<path d="${d}" fill="url(#${gid})" stroke="none"/>`).join('');
 
-  const garments = [...bottoms, ...shoes, ...tops, ...outers];
+  const garments = [...bottoms, ...shoes, ...tops, ...outers, ...hats];
 
   return `
-<svg class="garment" viewBox="0 0 200 300" role="img" aria-label="${label}" xmlns="http://www.w3.org/2000/svg">
+<svg class="garment" viewBox="${VIEW_BOX}" role="img" aria-label="${label}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0"   stop-color="#000" stop-opacity=".16"/>
@@ -150,11 +178,12 @@ function garmentSVG(look, opts = {}) {
   <!-- 1. 体。服より先に置きます -->
   ${paint(BODY, 'var(--form, #d8d2c4)')}
 
-  <!-- 2. 下 → 3. 足元 → 4. 上 → 5. 羽織り -->
+  <!-- 2. 下 → 3. 足元 → 4. 上 → 5. 羽織り → 6. 帽子 -->
   ${paint(bottoms, look.colors.bottom)}
   ${paint(shoes,   look.colors.shoe)}
   ${paint(tops,    look.colors.top)}
   ${outers.length ? paint(outers, look.colors.outer) : ''}
+  ${hats.length   ? paint(hats,   look.colors.hat)   : ''}
 
   <!-- 6. 影を一枚。multiply なので、下の色を選び直しても効き方は変わりません -->
   <g style="mix-blend-mode:multiply">${shade(garments)}</g>
