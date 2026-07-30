@@ -491,7 +491,8 @@ const BASE_SHAPE = {
   id: 'base', name: '基本', note: 'シャツに細いパンツ。形の癖がないので、色だけを見たいときに',
   top: 'shirt', outer: 'none', bottom: 'slim', shoe: 'low', hat: 'none',
 };
-let shapeId = 'base';
+// 最初から実写で見せられる、羽織り・帽子なしの形を選びます。
+let shapeId = 'casual';
 
 // 系統から形だけを取り出します。色は look から読みません。
 function shapes() {
@@ -528,6 +529,59 @@ function renderShapePicker() {
   });
 }
 
+let figureRenderToken = 0;
+
+function renderLabFigure(sh, look, label) {
+  const host = $('#figure');
+  const real = shapeId !== 'base' &&
+    globalThis.RealLook?.has(shapeId) &&
+    outerOn === (sh.outer !== 'none') &&
+    hatOn === (sh.hat !== 'none');
+
+  if (!host.querySelector('.real-look')) {
+    host.innerHTML = `
+      <canvas class="real-look" width="768" height="1152" aria-hidden="true"></canvas>
+      <div class="vector-look"></div>
+      <span class="look-mode" aria-hidden="true"></span>`;
+  }
+
+  const token = ++figureRenderToken;
+  const canvas = host.querySelector('.real-look');
+  const vector = host.querySelector('.vector-look');
+  const mode = host.querySelector('.look-mode');
+
+  host.setAttribute('role', 'img');
+  host.setAttribute('aria-label', label);
+  host.classList.toggle('is-real', real);
+  host.classList.toggle('is-vector', !real);
+
+  if (!real) {
+    vector.innerHTML = garmentSVG(look, { label });
+    mode.textContent = 'SHAPE PREVIEW';
+    $('#figure-cap').textContent = '形を足したときは図解で確認';
+    return;
+  }
+
+  mode.textContent = 'LIVE COLOR';
+  $('#figure-cap').textContent = '写真の陰影を残したまま再着色';
+  host.classList.add('is-loading');
+  RealLook.render(canvas, shapeId, look.colors)
+    .then(ok => {
+      if (token !== figureRenderToken) return;
+      host.classList.remove('is-loading');
+      if (!ok) throw new Error('real look is unavailable');
+    })
+    .catch(() => {
+      if (token !== figureRenderToken) return;
+      host.classList.remove('is-loading');
+      host.classList.remove('is-real');
+      host.classList.add('is-vector');
+      vector.innerHTML = garmentSVG(look, { label });
+      mode.textContent = 'SHAPE PREVIEW';
+      $('#figure-cap').textContent = '写真を読めないため図解で表示';
+    });
+}
+
 function syncLab() {
   const t = swatch(pick.top), b = swatch(pick.bottom), s = swatch(pick.shoes);
   const h = hatOn   ? swatch(pick.hat)   : null;
@@ -543,12 +597,14 @@ function syncLab() {
   if (h) colors.hat = h.hex;
   if (o) colors.outer = o.hex;
 
-  // 着装図は描き直します。体の上に服を重ねる順は garment.js が持っています。
-  $('#figure').innerHTML = garmentSVG(
-    { top: sh.top, outer: outerType, bottom: sh.bottom, shoe: sh.shoe, hat: hatType, colors },
-    { label: `${sh.name}の形。` + (h ? `帽子が${h.name}、` : '')
-             + (o ? `羽織りが${o.name}、` : '')
-             + `上が${t.name}、下が${b.name}、足元が${s.name}の着装図` }
+  const label = `${sh.name}の形。` + (h ? `帽子が${h.name}、` : '')
+    + (o ? `羽織りが${o.name}、` : '')
+    + `上が${t.name}、下が${b.name}、足元が${s.name}の着装例`;
+  renderLabFigure(
+    sh,
+    { top: sh.top, outer: outerType, bottom: sh.bottom, shoe: sh.shoe,
+      hat: hatType, colors },
+    label
   );
 
   /* 面積の目安。羽織ると上半身の広い面はそちらになるので、

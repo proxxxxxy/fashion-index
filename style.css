@@ -669,16 +669,33 @@ h1, h2, h3, .verdict-title, .recipe-name, .p-title { text-wrap: balance; }
   .lab-readout .verdict-notes li { font-size: .78rem; line-height: 1.75; }
 }
 
-/* ── 着装図 ─────────────────────────────────
-   garment.js が体の上に服を重ねて描きます。--form は体の色で、
-   服より必ず沈んでいなければ、服が浮いて見えません。 */
+/* ── 実写の配色プレビュー ─────────────────────
+   通常は写真を Canvas で再着色します。写真に存在しない羽織りや帽子を
+   足した場合だけ、形を正確に伝えられる garment.js の図解へ戻します。 */
 
 .garment { display: block; width: 100%; height: auto; --form: #cfc8b8; }
 .sec-dark .garment, .sec-terms .garment { --form: #4a4740; }
 
 .figure {
+  position: relative; overflow: hidden;
   border: var(--edge); background: var(--paper-hi); box-shadow: var(--shadow-lg);
   padding: .6rem .4rem 0;
+}
+.figure.is-real { padding: 0; background: #d8d4cb; }
+.real-look {
+  display: none; width: 100%; height: auto; aspect-ratio: 2 / 3;
+  object-fit: cover; opacity: 1;
+  transition: opacity var(--t-hover) var(--ease-out);
+}
+.vector-look { display: none; }
+.figure.is-real .real-look,
+.figure.is-vector .vector-look { display: block; }
+.figure.is-loading .real-look { opacity: .46; }
+.look-mode {
+  position: absolute; z-index: 2; left: .55rem; bottom: .5rem;
+  padding: .27rem .45rem; background: rgba(20,20,26,.88); color: var(--paper);
+  font-family: var(--display); font-size: .54rem; font-weight: 800;
+  letter-spacing: .15em; line-height: 1;
 }
 /* 細い画面では列幅いっぱいに伸びて 480px 超になります。
    色見本を選ぶ画面なので、図に主役を取られないよう頭を押さえます。 */

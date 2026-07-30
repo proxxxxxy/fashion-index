@@ -21,7 +21,7 @@
      どちらも縦線が太く横線が細いので、同じ活字に見えます。
      ゴシックは見出しではなくラベルと本文の実務だけに使います。 -->
 <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Zen+Old+Mincho:wght@400;700;900&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=19">
+<link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 
@@ -174,10 +174,10 @@
          見えていないと、色を変えた結果が確かめられません。 -->
     <div class="lab-readout">
     <div class="lab-figure">
-      <!-- 着装図は garment.js が描きます。体を先に置いて服を重ねる方式なので、
-           ここに空の器だけ用意します。 -->
+      <!-- 通常は実写を Canvas で再着色します。写真にない形を足した場合だけ、
+           garment.js の着装図へ戻して嘘のない表示にします。 -->
       <div class="figure" id="figure"></div>
-      <p class="figure-cap">面積の目安</p>
+      <p class="figure-cap" id="figure-cap">写真の陰影を残したまま再着色</p>
       <div class="lab-ratio" id="lab-ratio" aria-hidden="true"></div>
     </div>
     <div class="lab-verdict" id="verdict" aria-live="polite"></div>
@@ -316,6 +316,7 @@
 <script src="data-colors.js?v=18"></script>
 <script src="data-styles.js?v=18"></script>
 <script src="closet.js?v=18"></script>
-<script src="app.js?v=19"></script>
+<script src="recolor.js?v=20"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>
