@@ -27,6 +27,36 @@ vm.runInContext(src, ctx, { filename: 'data' });
 const { SWATCHES, SWATCH_GROUPS, STYLES, PRINCIPLES, RECIPES, TERMS, EXCEPTIONS,
         TOPS, OUTERS, BOTTOMS, SHOES, HATS, DETAILS, garmentSVG, judge } = ctx.__out;
 
+/* パスから座標を取り出します。
+   最初は数値を並び順で x,y,x,y… と数えていましたが、それだと H（水平）と
+   V（垂直）が壊れます。値が 1 つしかないので、以降の x と y が入れ替わり、
+   靴の幅が 76〜313 と報告されました。実害が出る前に気づけましたが、
+   検算する側が壊れているのが最も危ないので、素直に解釈します。 */
+function points(d) {
+  const toks = d.match(/[MLCHVZmlchvz]|-?\d+(?:\.\d+)?/g) || [];
+  const pts = [];
+  let cmd = '', x = 0, y = 0, i = 0;
+  const num = () => Number(toks[i++]);
+  while (i < toks.length) {
+    if (/^[MLCHVZmlchvz]$/.test(toks[i])) { cmd = toks[i++]; continue; }
+    switch (cmd) {
+      case 'M': case 'L': x = num(); y = num(); pts.push([x, y]); break;
+      case 'C': for (let k = 0; k < 3; k++) { x = num(); y = num(); pts.push([x, y]); } break;
+      case 'H': x = num(); pts.push([x, y]); break;
+      case 'V': y = num(); pts.push([x, y]); break;
+      default:  num();  // 想定外のコマンドは読み捨てて、下で落とします
+    }
+  }
+  return pts;
+}
+
+// 検算するパスは M/L/C/H/V/Z だけで書く決まりです。他が混ざると
+// points() が黙って取りこぼします。
+const simpleOnly = d => !/[AaQqSsTt]/.test(d);
+
+const yMax = d => Math.max(...points(d).map(p => p[1]));
+const xsOf = d => points(d).map(p => p[0]);
+
 const fails = [];
 const ok = (cond, msg) => { if (!cond) fails.push(msg); };
 
@@ -186,9 +216,8 @@ for (const [name, paths] of Object.entries(HATS)) {
   ok(paths.length >= 1, `HATS.${name}: 型紙が空です`);
   // 帽子は額より上（y <= 34）にしか出てきてはいけません。顎は 44 です。
   for (const d of paths) {
-    const n = d.match(/-?\d+(?:\.\d+)?/g).map(Number);
-    const ys = n.filter((_, i) => i % 2 === 1);
-    ok(Math.max(...ys) <= 34, `HATS.${name}: 帽子が顔の下まで下りています（y ${Math.max(...ys)}）`);
+    ok(simpleOnly(d), `HATS.${name}: 検算できないコマンドが混ざっています`);
+    ok(yMax(d) <= 34, `HATS.${name}: 帽子が顔の下まで下りています（y ${yMax(d)}）`);
   }
 }
 
@@ -230,19 +259,37 @@ for (const s of STYLES) {
 // 身頃かどうかは「裾まで届いているか」で見ます（最大 y が 120 を超える）。
 // フードや襟は肩より上で閉じるので、跨いで構いません。曲線の種類で
 // 見分けようとして、C で描いたフードを身頃と誤判定したことがあります。
-const yMax = d => Math.max(...d.match(/-?\d+(?:\.\d+)?/g).map(Number).filter((_, i) => i % 2 === 1));
-const xsOf = d => d.match(/-?\d+(?:\.\d+)?/g).map(Number).filter((_, i) => i % 2 === 0);
-
 for (const [name, paths] of Object.entries(OUTERS)) {
   if (name === 'none') continue;
   const panels = paths.filter(d => yMax(d) > 120);
   ok(panels.length >= 2, `OUTERS.${name}: 裾まで届く身頃が ${panels.length} 枚。前開きなら 2 枚必要です`);
   for (const d of panels) {
+    ok(simpleOnly(d), `OUTERS.${name}: 検算できないコマンドが混ざっています`);
     const xs = xsOf(d);
     const left = xs.every(x => x <= 94), right = xs.every(x => x >= 106);
     ok(left || right,
        `OUTERS.${name}: 身頃が中心を跨いでいます（x ${Math.min(...xs)}〜${Math.max(...xs)}）。中の服が隠れます`);
   }
+}
+
+/* 横幅。肩は x 64-136（70 幅）です。ここから外へ出るのは袖山と羽織りの
+   肩だけで、片側 12 までに抑えます。88 幅で描いていたときは、上着が
+   虫の胸部のように張り出して、頭と腰が細く見えました。 */
+{
+  const widest = paths => {
+    const xs = paths.filter(simpleOnly).flatMap(xsOf);
+    return [Math.min(...xs), Math.max(...xs)];
+  };
+  const limit = (label, paths, out) => {
+    if (!paths.length) return;
+    const [lo, hi] = widest(paths);
+    ok(lo >= 64 - out && hi <= 136 + out,
+       `${label}: 肩（64-136）から片側 ${out} を超えて張り出しています（${lo}-${hi}）`);
+  };
+  for (const [k, v] of Object.entries(TOPS))   limit(`TOPS.${k}`, v, 18);
+  for (const [k, v] of Object.entries(OUTERS)) limit(`OUTERS.${k}`, v, 26);
+  // 靴が肩より外に出ると、それだけでがに股に見えます。
+  for (const [k, v] of Object.entries(SHOES))  limit(`SHOES.${k}`, v, 0);
 }
 
 // 羽織りと上が同じ色だと、開けた意味がありません。
